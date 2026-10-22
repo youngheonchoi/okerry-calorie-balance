@@ -58,6 +58,32 @@ export const lifestyleSchema = z
     cycleMinutes: num(0, 1440),
     other: z.string().max(200),
     otherMinutes: num(0, 1440),
+    stepBand: z
+      .enum([
+        "exact",
+        "under3000",
+        "3000to5000",
+        "5000to8000",
+        "8000plus",
+        "unknown",
+      ])
+      .optional(),
+    sittingBand: z
+      .enum(["under5", "5to6", "7to8", "9to10", "10plus", "unknown"])
+      .optional(),
+    walkCommuteDays: num(0, 7).int().optional(),
+    bikeCommuteDays: num(0, 7).int().optional(),
+    walkCommuteKm: num(0, 100).optional(),
+    commuteDays: num(0, 7).int().optional(),
+    commuteOutMode: z.enum(["walk", "bike", "other"]).optional(),
+    commuteReturnMode: z.enum(["walk", "bike", "other"]).optional(),
+    commuteOutWalkKm: num(0, 100).optional(),
+    commuteReturnWalkKm: num(0, 100).optional(),
+    commuteOutBikeMinutes: num(0, 300).optional(),
+    commuteReturnBikeMinutes: num(0, 300).optional(),
+    weekendActivity: z
+      .enum(["sedentary", "light", "active", "veryActive", "unknown"])
+      .optional(),
   })
   .refine(
     (l) =>
@@ -69,6 +95,18 @@ export const lifestyleSchema = z
       24,
     "겹치지 않는 하루 활동 시간을 24시간 이내로 입력해주세요",
   );
+export const neatAnswersSchema = z.object({
+  stepBand: z.enum(["under3000", "3000to5000", "5000to8000", "8000plus"]),
+  sittingBand: z.enum(["under5", "5to6", "7to8", "9to10", "10plus"]),
+  commuteDays: num(0, 7).int(),
+  commuteOutMode: z.enum(["walk", "bike", "other"]),
+  commuteReturnMode: z.enum(["walk", "bike", "other"]),
+  commuteOutWalkKm: num(0, 100).optional(),
+  commuteReturnWalkKm: num(0, 100).optional(),
+  commuteOutBikeMinutes: num(0, 300).optional(),
+  commuteReturnBikeMinutes: num(0, 300).optional(),
+  weekendActivity: z.enum(["sedentary", "light", "active", "veryActive"]),
+});
 const habit = z.object({
   kind,
   sessions: num(1, 21).int(),

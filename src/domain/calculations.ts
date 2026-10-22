@@ -65,11 +65,75 @@ export function estimateDailyTDEE(
 ): Omit<Tdee, "id" | "createdAt" | "updatedAt" | "effectiveFrom"> {
   const bmr = calculateBMR(profile),
     l = profile.lifestyle;
-  // All walking inputs describe the same daily walking pool: take the maximum, never sum.
-  const walkingMinutes = Math.max(l.steps / 100, l.walking * 60, l.walkMinutes);
+  const detailedNeat = l.stepBand !== undefined;
+  const stepEstimates = {
+    exact: l.steps,
+    under3000: 1500,
+    "3000to5000": 4000,
+    "5000to8000": 6500,
+    "8000plus": 9000,
+    unknown: 5000,
+  } as const;
+  const weekdaySteps = l.stepBand ? stepEstimates[l.stepBand] : l.steps;
+  const directionalCommute = l.commuteOutMode !== undefined;
+  const commuteWalkKm = directionalCommute
+    ? (l.commuteOutMode === "walk" ? (l.commuteOutWalkKm ?? 0) : 0) +
+      (l.commuteReturnMode === "walk" ? (l.commuteReturnWalkKm ?? 0) : 0)
+    : (l.walkCommuteKm ?? 0);
+  const commuteDays = directionalCommute
+    ? (l.commuteDays ?? 0)
+    : (l.walkCommuteDays ?? 5);
+  const weekdayWalkMinutes = Math.max(
+    weekdaySteps / 100,
+    commuteWalkKm * 12 * (commuteDays / 5),
+    directionalCommute
+      ? 0
+      : l.walkCommuteDays !== undefined
+        ? (l.walkMinutes * l.walkCommuteDays) / 5
+        : l.walkMinutes,
+  );
+  const weekendWalkMinutes = {
+    sedentary: 0,
+    light: 60,
+    active: 120,
+    veryActive: 180,
+    unknown: 30,
+  } as const;
+  // Weekday step counts include walking commute, so use the larger estimate instead of adding twice.
+  const walkingMinutes = detailedNeat
+    ? (weekdayWalkMinutes * 5 +
+        (l.weekendActivity
+          ? weekendWalkMinutes[l.weekendActivity]
+          : l.walking * 60) *
+          2) /
+      7
+    : Math.max(l.steps / 100, l.walking * 60, l.walkMinutes);
+  const sittingHours = l.sittingBand
+    ? {
+        under5: 4,
+        "5to6": 5.5,
+        "7to8": 7.5,
+        "9to10": 9.5,
+        "10plus": 11,
+        unknown: 8,
+      }[l.sittingBand]
+    : l.sitting;
+  const averageSittingHours = detailedNeat
+    ? (sittingHours * 5) / 7
+    : sittingHours;
+  const cyclingMinutes = directionalCommute
+    ? (((l.commuteOutMode === "bike" ? (l.commuteOutBikeMinutes ?? 0) : 0) +
+        (l.commuteReturnMode === "bike"
+          ? (l.commuteReturnBikeMinutes ?? 0)
+          : 0)) *
+        (l.commuteDays ?? 0)) /
+      7
+    : l.bikeCommuteDays !== undefined
+      ? (l.cycleMinutes * l.bikeCommuteDays) / 7
+      : l.cycleMinutes;
   const nonExercise =
     bmr * 0.08 +
-    profile.weight * (0.15 * l.sitting + 0.5 * l.standing) +
+    profile.weight * (0.15 * averageSittingHours + 0.5 * l.standing) +
     calculateExerciseCalories(
       "walking",
       "light",
@@ -79,7 +143,7 @@ export function estimateDailyTDEE(
     calculateExerciseCalories(
       "cycling",
       "light",
-      l.cycleMinutes,
+      cyclingMinutes,
       profile.weight,
     ) +
     calculateExerciseCalories("other", "light", l.otherMinutes, profile.weight);

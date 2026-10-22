@@ -35,6 +35,7 @@ export function Field({
   min,
   max,
   step,
+  name,
   required = false,
 }: {
   label: string;
@@ -44,6 +45,7 @@ export function Field({
   min?: string | number;
   max?: string | number;
   step?: string | number;
+  name?: string;
   required?: boolean;
 }) {
   return (
@@ -56,6 +58,7 @@ export function Field({
         min={min}
         max={max}
         step={step}
+        name={name}
         required={required}
       />
     </label>
@@ -66,11 +69,15 @@ export function Select({
   value,
   onChange,
   options,
+  name,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   options: Record<string, string>;
+  name?: string;
+  placeholder?: string;
 }) {
   const labelId = useId();
   return (
@@ -78,9 +85,11 @@ export function Select({
       <span id={labelId}>{label}</span>
       <select
         aria-labelledby={labelId}
+        name={name}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
+        {placeholder && <option value="">{placeholder}</option>}
         {Object.entries(options).map(([k, v]) => (
           <option key={k} value={k}>
             {v}

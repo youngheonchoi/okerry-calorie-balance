@@ -5,6 +5,40 @@
   padding: calc(24px + var(--safe-top, env(safe-area-inset-top, 0px))) 20px
     calc(130px + var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
 }
+.app-shell.onboarding-shell {
+  display: flex;
+  height: 100dvh;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+.onboarding {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.onboarding-header {
+  flex: none;
+  padding: calc(12px + var(--safe-top, env(safe-area-inset-top, 0px))) 20px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.onboarding-header .eyebrow {
+  margin-bottom: 8px;
+}
+.onboarding-header progress {
+  display: block;
+}
+.onboarding-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 20px 24px;
+}
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -150,6 +184,50 @@ button.wallet-secondary span {
 }
 .field > span {
   font-weight: 600;
+}
+.field-label {
+  margin: 20px 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.gender-field {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+}
+.gender-field legend {
+  margin-bottom: 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.gender-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.gender-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 52px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  font-weight: 600;
+}
+.gender-option.selected {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+}
+.gender-option input[type="radio"] {
+  width: 20px;
+  height: 20px;
+  min-height: 20px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--brand);
 }
 .hint {
   font-size: 13px;
@@ -386,10 +464,16 @@ button.wallet-secondary span {
   text-align: center;
 }
 .footer-actions {
+  flex: none;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-top: 32px;
+  gap: 8px;
+  margin-top: 0;
+  padding: 12px 20px
+    calc(16px + var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 -4px 14px rgba(20, 50, 30, 0.04);
 }
 .choices {
   display: flex;

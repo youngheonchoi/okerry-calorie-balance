@@ -13,18 +13,50 @@ async function onboard(page: Page) {
   await page.getByLabel("키 (cm)", { exact: true }).fill("175");
   await page.getByLabel("현재 체중 (kg)", { exact: true }).fill("70");
   await page.getByRole("button", { name: "다음", exact: true }).click();
-  await page.getByLabel("앉아 있는 시간 (시간/일)", { exact: true }).fill("8");
-  await page.getByLabel("서 있는 시간 (시간/일)", { exact: true }).fill("2");
-  await page.getByRole("button", { name: "다음", exact: true }).click();
+  const fixedControls = await page.locator(".onboarding").evaluate((root) => {
+    const header = root.querySelector(".onboarding-header")!;
+    const content = root.querySelector<HTMLElement>(".onboarding-content")!;
+    const footer = root.querySelector(".footer-actions")!;
+    const headerTop = header.getBoundingClientRect().top;
+    const footerTop = footer.getBoundingClientRect().top;
+    content.scrollTop = content.scrollHeight;
+    const result = {
+      scrollTop: content.scrollTop,
+      headerTop,
+      headerTopAfter: header.getBoundingClientRect().top,
+      footerTop,
+      footerTopAfter: footer.getBoundingClientRect().top,
+    };
+    content.scrollTop = 0;
+    return result;
+  });
+  expect(fixedControls.scrollTop).toBeGreaterThan(0);
+  expect(fixedControls.headerTopAfter).toBe(fixedControls.headerTop);
+  expect(fixedControls.footerTopAfter).toBe(fixedControls.footerTop);
   await page
-    .getByLabel("하루 평균 일상 걸음 수 (보)", { exact: true })
-    .fill("6000");
-  await page.getByRole("button", { name: "다음", exact: true }).click();
+    .getByLabel("운동하지 않는 평일의 하루 평균 걸음 수는 얼마인가요?", {
+      exact: true,
+    })
+    .selectOption("5000to8000");
+  await page
+    .getByLabel("근무일에 실제로 앉아 있는 시간은 어느 정도인가요?", {
+      exact: true,
+    })
+    .selectOption("7to8");
+  await page.getByLabel("출퇴근 일수 (일/주)", { exact: true }).fill("5");
+  await page.getByLabel("출근 방식", { exact: true }).selectOption("bike");
+  await page.getByLabel("출근 자전거 시간 (분)", { exact: true }).fill("10");
+  await page.getByLabel("퇴근 방식", { exact: true }).selectOption("walk");
+  await page.getByLabel("퇴근 도보 거리 (km)", { exact: true }).fill("3");
+  await page
+    .getByLabel("주말에 운동을 제외한 활동량은 어떤 편인가요?", { exact: true })
+    .selectOption("light");
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "나의 하루 소비 칼로리", exact: true }),
   ).toBeVisible();
+  await expect(page.locator(".onboarding-header .eyebrow")).toHaveText("4/6");
   await page
     .getByRole("button", { name: "이 결과로 시작하기", exact: true })
     .click();
@@ -289,7 +321,7 @@ test("recalculation preserves today and exports restorable JSON through official
     "70",
   );
   await page.getByLabel("현재 체중 (kg)", { exact: true }).fill("65");
-  for (let i = 0; i < 5; i++)
+  for (let i = 0; i < 4; i++)
     await page.getByRole("button", { name: "다음", exact: true }).click();
   await page
     .getByRole("button", { name: "계산 결과 저장하기", exact: true })
@@ -458,12 +490,13 @@ test.describe("mobile viewport gestures", () => {
     await page
       .getByRole("button", { name: "계산 시작하기", exact: true })
       .click();
-    await page.getByLabel("만 나이 (세)", { exact: true }).tap();
+    await page.getByLabel("만 나이 (세)", { exact: true }).fill("30");
+    await page.getByLabel("키 (cm)", { exact: true }).fill("175");
+    await page.getByLabel("현재 체중 (kg)", { exact: true }).fill("70");
     await expect
       .poll(() => page.evaluate(() => window.visualViewport?.scale))
       .toBe(1);
-    await page.getByRole("button", { name: "이전 단계", exact: true }).click();
-    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.getByRole("button", { name: "다음", exact: true }).click();
     await session.send("Input.dispatchTouchEvent", {
       type: "touchStart",
       touchPoints: [{ x: 180, y: 600 }],
@@ -478,7 +511,11 @@ test.describe("mobile viewport gestures", () => {
       touchPoints: [],
     });
     await expect
-      .poll(() => page.evaluate(() => window.scrollY))
+      .poll(() =>
+        page
+          .locator(".onboarding-content")
+          .evaluate((element) => element.scrollTop),
+      )
       .toBeGreaterThan(0);
     await session.detach();
   });

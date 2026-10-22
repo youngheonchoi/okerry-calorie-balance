@@ -47,6 +47,52 @@ describe("energy accounting", () => {
       }).rest,
     ).toBe(estimateDailyTDEE(p).rest);
   });
+  it("averages commuting and weekend NEAT while avoiding duplicate step-count walking", () => {
+    const p = fixture().profile!;
+    const base = estimateDailyTDEE({
+      ...p,
+      lifestyle: {
+        ...p.lifestyle,
+        steps: 6000,
+        stepBand: "5000to8000",
+        sittingBand: "7to8",
+        commuteDays: 5,
+        commuteOutMode: "other",
+        commuteReturnMode: "other",
+        weekendActivity: "sedentary",
+      },
+    });
+    const duplicateWalk = estimateDailyTDEE({
+      ...p,
+      lifestyle: {
+        ...p.lifestyle,
+        steps: 6000,
+        stepBand: "5000to8000",
+        sittingBand: "7to8",
+        commuteDays: 5,
+        commuteOutMode: "other",
+        commuteReturnMode: "walk",
+        commuteReturnWalkKm: 3,
+        weekendActivity: "sedentary",
+      },
+    });
+    expect(duplicateWalk.rest).toBeCloseTo(base.rest);
+    const frequentBike = estimateDailyTDEE({
+      ...p,
+      lifestyle: {
+        ...p.lifestyle,
+        steps: 6000,
+        stepBand: "5000to8000",
+        sittingBand: "7to8",
+        commuteDays: 5,
+        commuteOutMode: "bike",
+        commuteOutBikeMinutes: 10,
+        commuteReturnMode: "other",
+        weekendActivity: "active",
+      },
+    });
+    expect(frequentBike.rest).toBeGreaterThan(base.rest);
+  });
   it("includes TEF once and separates weekly exercise from daily records", () => {
     const w = fixture(),
       t = w.tdee_history[0];

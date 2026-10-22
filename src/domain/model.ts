@@ -31,6 +31,25 @@ export type Lifestyle = {
   cycleMinutes: number;
   other: string;
   otherMinutes: number;
+  stepBand?:
+    | "exact"
+    | "under3000"
+    | "3000to5000"
+    | "5000to8000"
+    | "8000plus"
+    | "unknown";
+  sittingBand?: "under5" | "5to6" | "7to8" | "9to10" | "10plus" | "unknown";
+  walkCommuteDays?: number;
+  bikeCommuteDays?: number;
+  walkCommuteKm?: number;
+  commuteDays?: number;
+  commuteOutMode?: "walk" | "bike" | "other";
+  commuteReturnMode?: "walk" | "bike" | "other";
+  commuteOutWalkKm?: number;
+  commuteReturnWalkKm?: number;
+  commuteOutBikeMinutes?: number;
+  commuteReturnBikeMinutes?: number;
+  weekendActivity?: "sedentary" | "light" | "active" | "veryActive" | "unknown";
 };
 export type Profile = Stamp & Body & { lifestyle: Lifestyle; habits: Habit[] };
 export type Tdee = Stamp & {

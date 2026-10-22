@@ -146,7 +146,7 @@ export default function App() {
       undefined)
     : undefined;
   return (
-    <main className="app-shell">
+    <main className={`app-shell${onboarding ? " onboarding-shell" : ""}`}>
       {loading ? (
         <div className="loading" role="status">
           <span className="loading-dot" />
