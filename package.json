@@ -1,0 +1,43 @@
+{
+  "name": "okerry-calorie-balance",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "tsc -b && vite build && ait build",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "deploy": "ait deploy"
+  },
+  "dependencies": {
+    "@apps-in-toss/web-framework": "3.8.0",
+    "@emotion/react": "^11.0.0",
+    "@toss/tds-colors": "latest",
+    "@toss/tds-mobile": "latest",
+    "@toss/tds-mobile-ait": "latest",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@apps-in-toss/devtools": "^3.8.0",
+    "@eslint/js": "^9.21.0",
+    "@playwright/test": "^1.64.1",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.21.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^15.15.0",
+    "prettier": "^3.4.2",
+    "typescript": "~5.7.2",
+    "typescript-eslint": "^8.24.1",
+    "vite": "^6.2.0",
+    "vitest": "^5.0.5"
+  }
+}
