@@ -35,6 +35,7 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
   padding: 16px 20px 24px;
@@ -114,6 +115,12 @@
   margin: 10px 0 18px;
   line-height: 1.3;
 }
+.balance-card.over-budget .hero-number {
+  color: #b85d16;
+}
+.balance-card.over-budget > span:first-child {
+  color: #b85d16;
+}
 .meter {
   background: var(--brand-soft);
   height: 7px;
@@ -121,19 +128,71 @@
   overflow: hidden;
   margin-bottom: 20px;
 }
+.meter.over-budget {
+  background: #fff0e2;
+}
 .meter > span {
   display: block;
   height: 100%;
   background: var(--brand);
   border-radius: 9px;
 }
+.meter.over-budget > span {
+  background: #f2a65a;
+}
+.balance-context {
+  margin-top: 8px;
+}
+.balance-divider {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 8px 0;
+}
+.balance-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--line-strong, #aab4ae);
+  cursor: pointer;
+  font-size: 12px;
+}
+.balance-chevron {
+  display: inline-block;
+  font-size: 16px;
+  line-height: 1;
+  transition: transform 160ms ease;
+}
+.balance-chevron.expanded {
+  transform: rotate(180deg);
+}
+.balance-details-shell {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 240ms ease,
+    opacity 180ms ease;
+}
+.balance-details-shell.open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.balance-details {
+  min-height: 0;
+  overflow: hidden;
+  padding-top: 4px;
+}
 .balance-foot {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-top: 1px solid var(--line);
-  padding-top: 18px;
-  margin-top: 10px;
+  margin-top: 8px;
   gap: 12px;
   font-size: 15px;
 }
@@ -142,10 +201,130 @@
   color: var(--muted);
   margin-bottom: 0;
 }
+.balance-card > .over-budget-message {
+  margin-top: 12px;
+  color: #9b5b2a;
+  line-height: 1.5;
+}
 .two {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+.cycle-week {
+  min-width: 0;
+  margin-top: 24px;
+}
+.cycle-week-heading {
+  margin-bottom: 12px;
+}
+.cycle-week-heading h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.cycle-week-heading > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.cycle-week-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+.cycle-week-strip::-webkit-scrollbar {
+  display: none;
+}
+.cycle-day {
+  display: flex;
+  flex: 0 0 72px;
+  aspect-ratio: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  text-align: center;
+}
+.cycle-day-weekday {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.2;
+}
+.cycle-day-date {
+  font-size: 14px;
+  line-height: 1.2;
+}
+.cycle-day-balance {
+  max-width: 100%;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  letter-spacing: -0.3px;
+}
+.cycle-day.deficit .cycle-day-balance {
+  color: var(--brand-strong);
+}
+.cycle-day.surplus .cycle-day-balance {
+  color: #b85d16;
+}
+.cycle-day.balanced .cycle-day-balance {
+  color: var(--muted);
+}
+.cycle-day.deficit,
+.cycle-day.surplus,
+.cycle-day.balanced {
+  background: #fff;
+  border: 1px solid var(--line);
+}
+.cycle-day.unrecorded {
+  background: #f3f5f4;
+  border-color: #e5eae7;
+  color: #66736b;
+}
+.cycle-day.unrecorded .cycle-day-weekday,
+.cycle-day.unrecorded .cycle-day-balance {
+  color: #66736b;
+}
+.cycle-week-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.cycle-week-total strong {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.total-balance-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 14px;
+  padding: 18px 20px;
+  border-color: var(--line);
+  box-shadow: none;
+}
+.total-balance-label,
+.total-balance-period {
+  color: var(--muted);
+  font-size: 13px;
+}
+.total-balance-value {
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1.4;
 }
 .stack {
   display: flex;
@@ -166,11 +345,11 @@ button.wallet-action span {
   color: var(--on-action) !important;
 }
 button.wallet-secondary {
-  background-color: var(--brand-soft) !important;
-  color: var(--brand-strong) !important;
+  background-color: var(--brand-action) !important;
+  color: var(--on-action) !important;
 }
 button.wallet-secondary span {
-  color: var(--brand-strong) !important;
+  color: var(--on-action) !important;
 }
 .actions > * {
   flex: 1;
@@ -333,13 +512,23 @@ button.wallet-secondary span {
 }
 .text-action,
 .record-actions button {
-  background: transparent;
-  border: 1px solid var(--line);
   border-radius: 10px;
+}
+.text-action {
+  background: var(--brand-action);
+  border: 1px solid var(--brand-action);
   min-height: 44px;
   padding: 7px 12px;
-  color: var(--brand-strong);
+  color: var(--on-action);
   font-size: 15px;
+}
+.record-actions button {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  min-height: 44px;
+  padding: 4px 10px;
+  color: var(--muted);
+  font-size: 13px;
 }
 .record {
   padding: 12px 0 20px;
@@ -350,6 +539,45 @@ button.wallet-secondary span {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+.food-keyword-list {
+  max-height: 45vh;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior-y: contain;
+}
+.food-keyword-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 56px;
+  border-bottom: 1px solid var(--line);
+}
+.food-keyword-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.food-keyword-info > span {
+  color: var(--muted);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.food-keyword-info small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.food-keyword-delete {
+  flex: none;
+  min-width: 52px;
+  min-height: 44px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 13px;
 }
 .record p {
   color: var(--muted);
@@ -424,7 +652,21 @@ button.wallet-secondary span {
   background: var(--brand);
 }
 .welcome {
-  padding-top: 28px;
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  width: 100%;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  border: 0;
+  padding: calc(28px + var(--safe-top, env(safe-area-inset-top, 0px))) 20px
+    calc(24px + var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
+  background: var(--canvas);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
 }
 .wallet-symbol {
   display: grid;
@@ -453,6 +695,14 @@ button.wallet-secondary span {
   gap: 12px;
   margin-top: 28px;
 }
+.welcome-actions.single {
+  grid-template-columns: 1fr;
+}
+.welcome-actions.single button {
+  aspect-ratio: auto;
+  min-height: 56px;
+  border-radius: 18px !important;
+}
 .welcome-actions button {
   width: 100%;
   aspect-ratio: 1;
@@ -462,6 +712,24 @@ button.wallet-secondary span {
 }
 .welcome > .hint {
   text-align: center;
+}
+.welcome-prompt {
+  position: absolute;
+  top: 50%;
+  left: 20px;
+  right: 20px;
+  margin: 0;
+  transform: translateY(-50%);
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.welcome-device-note {
+  position: absolute;
+  right: 20px;
+  bottom: calc(24px + var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
+  left: 20px;
+  margin: 0;
 }
 .footer-actions {
   flex: none;
@@ -489,8 +757,8 @@ button.wallet-secondary span {
   min-height: 48px;
 }
 .choice.selected {
-  background: var(--brand-soft);
-  color: var(--brand-strong);
+  background: var(--brand-action);
+  color: var(--on-action);
   border-color: var(--brand);
 }
 dialog {
@@ -554,6 +822,10 @@ dialog::backdrop {
 @media (prefers-reduced-motion: reduce) {
   .loading-dot {
     animation: none;
+  }
+  .balance-details-shell,
+  .balance-chevron {
+    transition: none;
   }
 }
 @media (max-width: 360px) {

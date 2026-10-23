@@ -46,7 +46,7 @@ const newProfile = (): Profile => ({
     cycleMinutes: 0,
     other: "",
     otherMinutes: 0,
-    commuteDays: 0,
+    commuteDays: undefined,
   },
   habits: [],
 });
@@ -92,7 +92,7 @@ export function GoalFields({
           onChange={(v) =>
             onChange({
               ...goal,
-              balance: Number(v) * (goal.kind === "lose" ? -1 : 1),
+              balance: v === "" ? NaN : Number(v) * (goal.kind === "lose" ? -1 : 1),
             })
           }
           min={0}
@@ -160,7 +160,9 @@ export function CycleFields({
             min={1}
             max={365}
             value={cycle.days}
-            onChange={(v) => onChange({ ...cycle, days: Number(v) })}
+            onChange={(v) =>
+              onChange({ ...cycle, days: v === "" ? NaN : Number(v) })
+            }
           />
         </>
       )}
@@ -202,7 +204,7 @@ export default function Onboarding({
         ...current,
         lifestyle: {
           ...current.lifestyle,
-          commuteDays: current.lifestyle.commuteDays ?? 0,
+          commuteDays: current.lifestyle.commuteDays,
         },
       }));
       setReady(true);
@@ -408,7 +410,7 @@ export default function Onboarding({
                 포함한 하루 총 소비량이에요.
               </p>
             </Card>
-            <p className="hint">계산에는 약 3~5분이 걸려요.</p>
+            <p className="hint">계산에는 약 1~3분이 걸려요.</p>
           </>
         )}
         {step === 1 && (
@@ -536,8 +538,10 @@ export default function Onboarding({
               min={0}
               max={7}
               step={1}
-              value={profile.lifestyle.commuteDays ?? 0}
-              onChange={(v) => life("commuteDays", Number(v))}
+              value={profile.lifestyle.commuteDays ?? ""}
+              onChange={(v) =>
+                life("commuteDays", v === "" ? undefined : Number(v))
+              }
             />
             <Select
               label="출근 방식"
@@ -556,7 +560,9 @@ export default function Onboarding({
                 max={100}
                 step="0.1"
                 value={profile.lifestyle.commuteOutWalkKm ?? ""}
-                onChange={(v) => life("commuteOutWalkKm", Number(v))}
+                onChange={(v) =>
+                  life("commuteOutWalkKm", v === "" ? undefined : Number(v))
+                }
               />
             )}
             {profile.lifestyle.commuteOutMode === "bike" && (
@@ -567,7 +573,12 @@ export default function Onboarding({
                 min={0}
                 max={300}
                 value={profile.lifestyle.commuteOutBikeMinutes ?? ""}
-                onChange={(v) => life("commuteOutBikeMinutes", Number(v))}
+                onChange={(v) =>
+                  life(
+                    "commuteOutBikeMinutes",
+                    v === "" ? undefined : Number(v),
+                  )
+                }
               />
             )}
             <Select
@@ -587,7 +598,9 @@ export default function Onboarding({
                 max={100}
                 step="0.1"
                 value={profile.lifestyle.commuteReturnWalkKm ?? ""}
-                onChange={(v) => life("commuteReturnWalkKm", Number(v))}
+                onChange={(v) =>
+                  life("commuteReturnWalkKm", v === "" ? undefined : Number(v))
+                }
               />
             )}
             {profile.lifestyle.commuteReturnMode === "bike" && (
@@ -598,7 +611,12 @@ export default function Onboarding({
                 min={0}
                 max={300}
                 value={profile.lifestyle.commuteReturnBikeMinutes ?? ""}
-                onChange={(v) => life("commuteReturnBikeMinutes", Number(v))}
+                onChange={(v) =>
+                  life(
+                    "commuteReturnBikeMinutes",
+                    v === "" ? undefined : Number(v),
+                  )
+                }
               />
             )}
             <Select
@@ -675,7 +693,11 @@ export default function Onboarding({
                     value={h.sessions}
                     min={1}
                     max={21}
-                    onChange={(v) => habit(h.kind, { sessions: Number(v) })}
+                    onChange={(v) =>
+                      habit(h.kind, {
+                        sessions: v === "" ? NaN : Number(v),
+                      })
+                    }
                   />
                   <Field
                     label="평균 시간 (분)"
@@ -683,7 +705,9 @@ export default function Onboarding({
                     value={h.minutes}
                     min={1}
                     max={600}
-                    onChange={(v) => habit(h.kind, { minutes: Number(v) })}
+                    onChange={(v) =>
+                      habit(h.kind, { minutes: v === "" ? NaN : Number(v) })
+                    }
                   />
                 </div>
                 <Select

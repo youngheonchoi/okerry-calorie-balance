@@ -2,7 +2,7 @@
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color-scheme: light;
   --brand: #0f9d58;
-  --brand-action: #08763f;
+  --brand-action: #0f9d58;
   --on-action: #fff;
   --brand-strong: #08763f;
   --brand-soft: #eaf7f0;
@@ -21,6 +21,7 @@
 html {
   touch-action: pan-x pan-y;
   overscroll-behavior-y: none;
+  scrollbar-gutter: stable;
 }
 * {
   box-sizing: border-box;

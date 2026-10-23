@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Action, Card, Icon } from "./components/ui";
 import { draftStore, repository } from "./data/sdk";
-import { addDays, effective, localDate } from "./domain/calculations";
+import {
+  addDays,
+  effective,
+  getCycleDateRange,
+  localDate,
+} from "./domain/calculations";
 import {
   emptyWallet,
   type MealType,
@@ -11,7 +16,6 @@ import {
 import Home from "./pages/Home";
 import Records from "./pages/Records";
 import My from "./pages/My";
-import Backup from "./pages/Backup";
 import Onboarding from "./pages/Onboarding";
 import "./App.css";
 import { SafeArea, graniteEvent } from "@apps-in-toss/web-framework";
@@ -31,7 +35,6 @@ export default function App() {
     [busy, setBusy] = useState(false),
     [tab, setTab] = useState<Tab>("home"),
     [onboarding, setOnboarding] = useState(false),
-    [backup, setBackup] = useState(false),
     [date, setDate] = useState(localDate),
     [today, setToday] = useState(localDate),
     [mealType, setMealType] = useState<MealType | undefined>();
@@ -68,9 +71,9 @@ export default function App() {
     }
   }, []);
   useEffect(() => {
-    if (onboarding && !backup) return;
+    if (onboarding) return;
     // At the root screen, keep the container's normal exit/back behavior.
-    if (!backup && tab === "home") return;
+    if (tab === "home") return;
     return graniteEvent.addEventListener("backEvent", {
       onEvent: () => {
         if (saving.current) return;
@@ -79,13 +82,12 @@ export default function App() {
           dialog.dispatchEvent(new Event("cancel", { cancelable: true }));
           return;
         }
-        if (backup) setBackup(false);
-        else setTab("home");
+        setTab("home");
       },
       onError: () =>
         setError("뒤로가기를 연결하지 못했어요. 화면의 버튼을 이용해주세요."),
     });
-  }, [onboarding, backup, tab]);
+  }, [onboarding, tab]);
   useEffect(() => {
     const refresh = () => setToday(localDate());
     const timer = window.setInterval(refresh, 30000);
@@ -160,12 +162,7 @@ export default function App() {
               <p role="alert" className="error">
                 {loadError}
               </p>
-              <div className="stack">
-                <Action onClick={() => void load()}>다시 불러오기</Action>
-                <Action secondary onClick={() => setBackup(true)}>
-                  백업에서 복원하기
-                </Action>
-              </div>
+              <Action onClick={() => void load()}>다시 불러오기</Action>
             </Card>
           ) : onboarding ? (
             <Onboarding
@@ -180,7 +177,10 @@ export default function App() {
               onCancel={() => setOnboarding(false)}
               onComplete={async (result) => {
                 const current = wallet ?? emptyWallet(today),
-                  from = initialized ? addDays(today, 1) : today;
+                  initialStartDate = initialized
+                    ? current.meta.startedOn
+                    : getCycleDateRange(today, result.cycle).start,
+                  from = initialized ? addDays(today, 1) : initialStartDate;
                 const p = { ...result.profile };
                 const next: Wallet = {
                   ...current,
@@ -199,6 +199,7 @@ export default function App() {
                     : [{ ...result.cycle, effectiveFrom: from }],
                   meta: {
                     ...current.meta,
+                    startedOn: initialStartDate,
                     initialized: true,
                     updatedAt: new Date().toISOString(),
                   },
@@ -211,23 +212,26 @@ export default function App() {
               }}
             />
           ) : !initialized ? (
-            <div className="welcome">
+            <div
+              className="welcome"
+              role="button"
+              tabIndex={0}
+              aria-label="아무 곳이나 터치해 시작하기"
+              onClick={() => setOnboarding(true)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setOnboarding(true);
+                }
+              }}
+            >
               <h1>
                 칼로리 잔고에
                 <br />
                 오신 것을 환영해요
               </h1>
-              <p>
-                이전에 사용하던 기록이 있나요? 저장해 둔 데이터가 있다면 그대로
-                이어서 사용할 수 있어요.
-              </p>
-              <div className="welcome-actions">
-                <Action onClick={() => setBackup(true)}>데이터 가져오기</Action>
-                <Action secondary onClick={() => setOnboarding(true)}>
-                  처음이에요
-                </Action>
-              </div>
-              <p className="hint">
+              <p className="hint welcome-prompt">아무 곳이나 터치</p>
+              <p className="hint welcome-device-note">
                 로그인 없이 시작해요. 기록은 기기에만 저장돼요.
               </p>
             </div>
@@ -243,8 +247,6 @@ export default function App() {
                   key={today}
                   wallet={wallet}
                   openRecords={openRecords}
-                  save={save}
-                  busy={busy}
                   today={today}
                 />
               )}
@@ -269,7 +271,6 @@ export default function App() {
                     setOnboarding(true);
                     window.scrollTo(0, 0);
                   }}
-                  importData={() => setBackup(true)}
                   reset={reset}
                 />
               )}
@@ -281,6 +282,12 @@ export default function App() {
                       aria-current={tab === key ? "page" : undefined}
                       className={tab === key ? "active" : ""}
                       onClick={() => {
+                        // The exercise tab may retain a past date after browsing
+                        // records. Entering it from Home should use today's date
+                        // so its workout choice updates today's Home summary.
+                        if (tab === "home" && key === "exercise") {
+                          setDate(today);
+                        }
                         setMealType(undefined);
                         changeTab(key);
                       }}
@@ -292,23 +299,6 @@ export default function App() {
                 )}
               </nav>
             </>
-          )}
-          {backup && (
-            <Backup
-              exists={initialized || !!loadError}
-              busy={busy}
-              onClose={() => setBackup(false)}
-              onRestore={async (w) => {
-                await save(w);
-                await draftStore.clear().catch(() => undefined);
-                setLoadError("");
-                setBackup(false);
-                setOnboarding(false);
-                setTab("home");
-                setDate(today);
-                window.scrollTo(0, 0);
-              }}
-            />
           )}
         </>
       )}

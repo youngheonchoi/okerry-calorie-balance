@@ -4,39 +4,10 @@ import {
   dateSchema,
   draftProfileSchema,
   lifestyleSchema,
-  parseBackup,
   validateWallet,
 } from "../../src/domain/validation";
 import { exercise, fixture } from "../fixtures";
-describe("backup validation", () => {
-  it("clears day completion when energy records are missing", () => {
-    const w = fixture();
-    w.meta.completedDays = ["2026-10-01"];
-    const partial = { ...w } as Partial<typeof w>;
-    delete partial.meals;
-    expect(
-      parseBackup(JSON.stringify(partial)).wallet.meta.completedDays,
-    ).toEqual([]);
-    expect(w.meta.completedDays).toEqual(["2026-10-01"]);
-  });
-  it("round-trips a complete backup", () => {
-    const w = fixture();
-    expect(parseBackup(JSON.stringify(w))).toEqual({ wallet: w, missing: [] });
-  });
-  it("reports optional missing collections without altering original", () => {
-    const w = fixture();
-    const partial = { ...w } as Partial<typeof w>;
-    delete partial.meals;
-    delete partial.weights;
-    const parsed = parseBackup(JSON.stringify(partial));
-    expect(parsed.missing).toEqual(["meals", "weights"]);
-    expect(parsed.wallet.meals).toEqual([]);
-    expect(w.meals).toEqual([]);
-  });
-  it.each(["invalid", "[]", "null", '{"schemaVersion":2}'])(
-    "rejects invalid structures %s",
-    (raw) => expect(() => parseBackup(raw)).toThrow(),
-  );
+describe("validation", () => {
   it("rejects invalid dates and future records", () => {
     expect(dateSchema.safeParse("2026-02-30").success).toBe(false);
     const w = fixture();
@@ -47,6 +18,15 @@ describe("backup validation", () => {
     const w = fixture();
     w.goal_history = [];
     expect(() => validateWallet(w)).toThrow("필수");
+  });
+  it("migrates legacy regular workout entries into daily workout status", () => {
+    const w = fixture();
+    delete (w.meta as Partial<typeof w.meta>).workoutStatus;
+    w.exercises = [exercise()];
+    const migrated = validateWallet(w);
+    expect(migrated.meta.workoutStatus).toMatchObject([
+      { date: "2026-10-01", workedOut: true },
+    ]);
   });
   it("rejects duplicate IDs and duplicate effective dates", () => {
     const w = fixture();

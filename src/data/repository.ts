@@ -83,7 +83,7 @@ export function createRepository(store: Store) {
         for (const f of fields) {
           if (values[f] === null)
             throw new Error(
-              "저장된 데이터 일부가 없어요. 초기화하지 않고 백업 복원을 기다리고 있어요.",
+              "저장된 데이터 일부를 읽지 못했어요. 다시 시도해주세요.",
             );
           const envelope = JSON.parse(values[f]!);
           if (envelope.schemaVersion !== 1)

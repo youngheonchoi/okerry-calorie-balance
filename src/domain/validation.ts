@@ -216,6 +216,12 @@ const walletSchema = z.object({
     ...stampSchema,
     startedOn: dateSchema,
     completedDays: z.array(dateSchema),
+    workoutStatus: z
+      .array(
+        z.object({ ...stampSchema, date: dateSchema, workedOut: z.boolean() }),
+      )
+      .default([]),
+    hiddenFoodKeywords: z.array(z.string().trim().min(1).max(100)).default([]),
     initialized: z.boolean(),
   }),
 });
@@ -229,6 +235,25 @@ export function validateWallet(input: unknown): Wallet {
         .join(" / ")}`,
     );
   const w = parsed.data;
+  const rawMeta =
+    typeof input === "object" && input !== null && "meta" in input
+      ? (input as { meta?: { workoutStatus?: unknown } }).meta
+      : undefined;
+  if (!Array.isArray(rawMeta?.workoutStatus)) {
+    const legacyStatuses = new Map<string, (typeof w.exercises)[number]>();
+    for (const exercise of w.exercises)
+      if (exercise.source === "regular")
+        legacyStatuses.set(exercise.date, exercise);
+    w.meta.workoutStatus = [...legacyStatuses.entries()].map(
+      ([date, exercise]) => ({
+        id: exercise.id,
+        createdAt: exercise.createdAt,
+        updatedAt: exercise.updatedAt,
+        date,
+        workedOut: true,
+      }),
+    );
+  }
   for (const list of [
     w.tdee_history,
     w.goal_history,
@@ -250,23 +275,24 @@ export function validateWallet(input: unknown): Wallet {
       !w.cycle_history.some((x) => x.effectiveFrom <= w.meta.startedOn))
   )
     throw new Error("필수 사용자 설정 또는 최초 계산 이력이 누락됐어요");
-  if (
-    [...w.meals, ...w.exercises, ...w.weights].some(
-      (x) => x.date < w.meta.startedOn,
-    ) ||
-    w.meta.completedDays.some((d) => d < w.meta.startedOn)
-  )
-    throw new Error("기록 시작일보다 이전인 기록이 있어요");
+  if (w.meta.completedDays.some((d) => d < w.meta.startedOn))
+    throw new Error("기록 시작일보다 이전인 완료 날짜가 있어요");
   if (
     w.meta.startedOn > localDate() ||
     [...w.meals, ...w.exercises, ...w.weights].some(
       (x) => x.date > localDate(),
     ) ||
+    w.meta.workoutStatus.some((x) => x.date > localDate()) ||
     w.meta.completedDays.some((d) => d > localDate())
   )
     throw new Error("미래 날짜의 기록은 가져올 수 없어요");
   if (new Set(w.meta.completedDays).size !== w.meta.completedDays.length)
     throw new Error("기록 완료 날짜가 중복돼요");
+  if (
+    new Set(w.meta.workoutStatus.map((item) => item.date)).size !==
+    w.meta.workoutStatus.length
+  )
+    throw new Error("운동 여부 기록 날짜가 중복돼요");
   for (const t of w.tdee_history) {
     const computed = estimateDailyTDEE(t.profile, t.correction);
     for (const field of [
@@ -307,37 +333,4 @@ export function validateWallet(input: unknown): Wallet {
         throw new Error("설정 이력의 목표 섭취량은 0kcal보다 커야 해요");
     }
   return w;
-}
-export function parseBackup(raw: string): {
-  wallet: Wallet;
-  missing: string[];
-} {
-  if (raw.length > 20_000_000)
-    throw new Error("백업 파일은 20MB 이하로 선택해주세요");
-  let value: unknown;
-  try {
-    value = JSON.parse(raw);
-  } catch {
-    throw new Error("올바른 JSON 파일이 아니에요");
-  }
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new Error("백업 구조가 올바르지 않아요");
-  const data = { ...value } as Record<string, unknown>,
-    missing: string[] = [];
-  for (const key of ["meals", "exercises", "weights"])
-    if (!(key in data)) {
-      data[key] = [];
-      missing.push(key);
-    }
-  if (
-    (missing.includes("meals") || missing.includes("exercises")) &&
-    data.meta &&
-    typeof data.meta === "object" &&
-    !Array.isArray(data.meta)
-  )
-    data.meta = { ...data.meta, completedDays: [] };
-  const wallet = validateWallet(data);
-  if (!wallet.meta.initialized)
-    throw new Error("최초 설정이 완료된 백업만 복원할 수 있어요");
-  return { wallet, missing };
 }

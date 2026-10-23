@@ -185,12 +185,22 @@ export function calculateDailyExpenditure(
   tdee: Tdee,
   exercises: Exercise[],
   date: string,
+  workedOut?: boolean,
 ): number {
+  const loggedThatDay = exercises.filter((e) => e.date === date);
+  const legacyRegular =
+    workedOut !== undefined
+      ? 0
+      : loggedThatDay
+          .filter((e) => e.source === "regular")
+          .reduce((n, e) => n + e.calories, 0);
+  const additional = loggedThatDay
+    .filter((e) => e.source === "extra")
+    .reduce((n, e) => n + e.calories, 0);
   return (
-    tdee.rest +
-    exercises
-      .filter((e) => e.date === date && e.source !== "daily")
-      .reduce((n, e) => n + e.calories, 0)
+    (workedOut === true ? tdee.exerciseDay : tdee.rest) +
+    legacyRegular +
+    additional
   );
 }
 export const calculateDailyBalance = (intake: number, expenditure: number) =>
@@ -202,7 +212,12 @@ export function daily(wallet: Wallet, date: string) {
     goal = effective(wallet.goal_history, date);
   if (!tdee || !goal) return null;
   const intake = calculateDailyIntake(wallet.meals, date),
-    expenditure = calculateDailyExpenditure(tdee, wallet.exercises, date),
+    expenditure = calculateDailyExpenditure(
+      tdee,
+      wallet.exercises,
+      date,
+      wallet.meta.workoutStatus.find((item) => item.date === date)?.workedOut,
+    ),
     target = expenditure + goal.balance;
   return {
     date,
@@ -212,7 +227,8 @@ export function daily(wallet: Wallet, date: string) {
     remaining: calculateRemainingCalories(target, intake),
     balance: calculateDailyBalance(intake, expenditure),
     goalBalance: goal.balance,
-    complete: wallet.meta.completedDays.includes(date),
+    // All dates in the tracked period count immediately, including days with no entries.
+    complete: date >= wallet.meta.startedOn && date <= localDate(),
   };
 }
 export function getCycleDateRange(

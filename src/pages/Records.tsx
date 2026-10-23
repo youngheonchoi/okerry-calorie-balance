@@ -1,9 +1,9 @@
-import { balanceText, kcal, errorMessage } from "../domain/format";
+import { kcal, errorMessage } from "../domain/format";
 import { useEffect, useState } from "react";
 import { Action, Card, Field, Metric, Modal, Select } from "../components/ui";
 import {
-  daily,
   calculateExerciseCalories,
+  getCycleDateRange,
   effective,
   localDate,
 } from "../domain/calculations";
@@ -17,6 +17,9 @@ import {
   type Wallet,
 } from "../domain/model";
 import { exerciseSchema, mealSchema } from "../domain/validation";
+const foodOptionValue = (meal: Pick<Meal, "name" | "calories">) =>
+  `${normalizeFoodName(meal.name)}::${meal.calories}`;
+const normalizeFoodName = (name: string) => name.trim().toLocaleLowerCase();
 export default function Records({
   wallet,
   kind,
@@ -35,17 +38,49 @@ export default function Records({
   busy: boolean;
 }) {
   const [meal, setMeal] = useState<Meal | null>(null),
-    [completion, setCompletion] = useState(false),
+    [mealPreset, setMealPreset] = useState("manual"),
     [exercise, setExercise] = useState<Exercise | null>(null),
     [error, setError] = useState(""),
     [deletion, setDeletion] = useState<{
       kind: "meal" | "exercise";
       id: string;
     } | null>(null);
-  const stats = daily(wallet, date),
-    meals = wallet.meals.filter((m) => m.date === date),
+  const meals = wallet.meals.filter((m) => m.date === date),
     exercises = wallet.exercises.filter((e) => e.date === date);
-  const canRecord = date >= wallet.meta.startedOn && date <= localDate();
+  const hiddenFoodKeywords = new Set(
+    wallet.meta.hiddenFoodKeywords.map(normalizeFoodName),
+  );
+  const previousFoods = Array.from(
+    wallet.meals
+      .slice()
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .reduce((foods, item) => {
+        const key = foodOptionValue(item);
+        if (
+          !hiddenFoodKeywords.has(normalizeFoodName(item.name)) &&
+          !foods.has(key)
+        )
+          foods.set(key, item);
+        return foods;
+      }, new Map<string, Meal>())
+      .values(),
+  );
+  const today = localDate();
+  const cycle =
+    effective(wallet.cycle_history, date) ??
+    wallet.cycle_history
+      .slice()
+      .sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom))[0];
+  const cycleRange = cycle
+    ? getCycleDateRange(date, { ...cycle, kind: "weekly", days: 7 })
+    : { start: date, end: date };
+  const canRecord = date <= today;
+  const workoutStatus = wallet.meta.workoutStatus.find(
+    (item) => item.date === date,
+  );
+  useEffect(() => {
+    if (date < wallet.meta.startedOn) setDate(wallet.meta.startedOn);
+  }, [date, setDate, wallet.meta.startedOn]);
   useEffect(() => {
     if (kind === "meal" && mealType)
       document
@@ -54,6 +89,7 @@ export default function Records({
   }, [kind, mealType, date]);
   const newMeal = (type: MealType) => {
     setError("");
+    setMealPreset("manual");
     setMeal({ ...stamp(), date, type, name: "", calories: NaN, memo: "" });
   };
   const newExercise = () => {
@@ -85,8 +121,10 @@ export default function Records({
           meals: [...wallet.meals.filter((m) => m.id !== item.id), item],
           meta: {
             ...wallet.meta,
+            hiddenFoodKeywords: wallet.meta.hiddenFoodKeywords.filter(
+              (name) => normalizeFoodName(name) !== normalizeFoodName(item.name),
+            ),
             updatedAt: new Date().toISOString(),
-            completedDays: wallet.meta.completedDays.filter((d) => d !== date),
           },
         });
         setMeal(null);
@@ -112,7 +150,6 @@ export default function Records({
           meta: {
             ...wallet.meta,
             updatedAt: new Date().toISOString(),
-            completedDays: wallet.meta.completedDays.filter((d) => d !== date),
           },
         });
         setExercise(null);
@@ -137,7 +174,6 @@ export default function Records({
         meta: {
           ...wallet.meta,
           updatedAt: new Date().toISOString(),
-          completedDays: wallet.meta.completedDays.filter((d) => d !== date),
         },
       });
       setDeletion(null);
@@ -145,68 +181,54 @@ export default function Records({
       setError(errorMessage(e));
     }
   }
+  async function setWorkoutStatus(workedOut: boolean) {
+    setError("");
+    const now = new Date().toISOString();
+    const previous = wallet.meta.workoutStatus.find(
+      (item) => item.date === date,
+    );
+    const status = previous
+      ? { ...previous, workedOut, updatedAt: now }
+      : { ...stamp(), date, workedOut };
+    try {
+      await save({
+        ...wallet,
+        meta: {
+          ...wallet.meta,
+          workoutStatus: [
+            ...wallet.meta.workoutStatus.filter((item) => item.date !== date),
+            status,
+          ],
+          updatedAt: now,
+        },
+      });
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  }
   return (
     <>
-      <div className="eyebrow">매일의 기록</div>
       <h1>{kind === "meal" ? "무엇을 드셨나요?" : "어떻게 움직였나요?"}</h1>
       <Field
         label="기록 날짜"
         type="date"
         value={date}
-        min={wallet.meta.startedOn}
-        max={localDate()}
+        min={
+          cycleRange.start < wallet.meta.startedOn
+            ? wallet.meta.startedOn
+            : cycleRange.start
+        }
+        max={cycleRange.end}
         onChange={(v) => {
           if (v) setDate(v);
         }}
       />
+      <p className="hint">
+        이번 관리 주기: {cycleRange.start} ~ {cycleRange.end}
+      </p>
       {!canRecord && (
-        <p className="notice">기록 시작일부터 오늘까지 선택해주세요.</p>
+        <p className="notice">오늘 이후 날짜는 기록할 수 없어요.</p>
       )}
-      {stats && canRecord && (
-        <button
-          className="completion"
-          disabled={busy}
-          onClick={() => {
-            setError("");
-            setCompletion(true);
-          }}
-        >
-          {stats.complete
-            ? "하루 기록 완료됨 · 다시 열기"
-            : "선택한 날짜의 식사·운동 기록 완료하기"}
-        </button>
-      )}
-      <Card className="tinted">
-        {kind === "meal" ? (
-          <>
-            <Metric label="기록한 섭취량" value={kcal(stats?.intake ?? 0)} />
-            <Metric
-              label="목표까지 남은 칼로리"
-              value={stats ? kcal(stats.remaining) : "계산 기준 없음"}
-            />
-            <p className="hint">
-              {stats?.complete
-                ? "하루 기록 완료"
-                : "기록 중 · 아직 하루 전체 섭취량이 아니에요"}
-            </p>
-          </>
-        ) : (
-          <>
-            <Metric label="운동 횟수" value={`${exercises.length}회`} />
-            <Metric
-              label="총 운동 시간"
-              value={`${exercises.reduce((n, e) => n + e.minutes, 0)}분`}
-            />
-            <Metric
-              label="기록한 운동 순소비량"
-              value={kcal(exercises.reduce((n, e) => n + e.calories, 0))}
-            />
-            <p className="hint">
-              일상 활동에 포함된 기록은 일일 소비량에 다시 더하지 않아요.
-            </p>
-          </>
-        )}
-      </Card>
       {kind === "meal" ? (
         Object.entries(mealLabels).map(([type, label]) => (
           <Card key={type} id={`meal-${type}`}>
@@ -233,18 +255,11 @@ export default function Records({
                     <button
                       onClick={() => {
                         setError("");
+                    setMealPreset("manual");
                         setMeal(m);
                       }}
                     >
                       수정
-                    </button>
-                    <button
-                      onClick={() => {
-                        setError("");
-                        setMeal({ ...m, ...stamp(), date });
-                      }}
-                    >
-                      다시 기록
                     </button>
                     <button
                       onClick={() => setDeletion({ kind: "meal", id: m.id })}
@@ -264,57 +279,76 @@ export default function Records({
           </Card>
         ))
       ) : (
-        <Card>
-          <h2>운동 내역</h2>
-          {exercises.length === 0 && (
-            <p className="empty">
-              아직 운동 기록이 없어요.
-              <br />
-              가볍게 걸은 시간부터 남겨보세요.
+        <>
+          <Card>
+            <h2>설정한 운동 루틴을 진행하셨나요?</h2>
+            <p className="hint">
+              처음 계산 때 설정한 운동 습관을 말해요. 추가로 한 운동은 아래에
+              따로 기록할 수 있어요.
             </p>
-          )}
-          {exercises.map((e) => (
-            <div className="record" key={e.id}>
-              <Metric label={exerciseLabels[e.kind]} value={kcal(e.calories)} />
-              <p>
-                {e.minutes}분 ·{" "}
-                {e.source === "daily"
-                  ? "일상 활동에 포함"
-                  : e.source === "regular"
-                    ? "정기 운동"
-                    : "추가 운동"}
-                {e.distance !== undefined ? ` · ${e.distance}km` : ""}
-              </p>
-              <div className="record-actions">
-                <button
-                  onClick={() => {
-                    setError("");
-                    setExercise(e);
-                  }}
-                >
-                  수정
-                </button>
-                <button
-                  onClick={() => setDeletion({ kind: "exercise", id: e.id })}
-                >
-                  삭제
-                </button>
-              </div>
+            <div className="choices" role="group" aria-label="정기 운동 여부">
+              <button
+                type="button"
+                className={`choice${workoutStatus?.workedOut === true ? " selected" : ""}`}
+                aria-pressed={workoutStatus?.workedOut === true}
+                disabled={!canRecord || busy}
+                onClick={() => void setWorkoutStatus(true)}
+              >
+                운동했어요
+              </button>
+              <button
+                type="button"
+                className={`choice${workoutStatus?.workedOut === false ? " selected" : ""}`}
+                aria-pressed={workoutStatus?.workedOut === false}
+                disabled={!canRecord || busy}
+                onClick={() => void setWorkoutStatus(false)}
+              >
+                운동 안 했어요
+              </button>
             </div>
-          ))}
-          <Action disabled={!canRecord || busy} onClick={newExercise}>
-            운동 기록 추가
-          </Action>
-        </Card>
-      )}
-      {kind === "meal" && meals.length > 0 && (
-        <Action
-          secondary
-          disabled={!canRecord}
-          onClick={() => newMeal(mealType ?? "breakfast")}
-        >
-          새 음식 기록
-        </Action>
+          </Card>
+          <Card>
+            <h2>추가 운동 내역</h2>
+            {exercises.length === 0 && (
+              <p className="empty">추가로 한 운동이 있으면 기록해보세요.</p>
+            )}
+            {exercises.map((e) => (
+              <div className="record" key={e.id}>
+                <Metric
+                  label={exerciseLabels[e.kind]}
+                  value={kcal(e.calories)}
+                />
+                <p>
+                  {e.minutes}분 ·{" "}
+                  {e.source === "daily"
+                    ? "일상 활동에 포함"
+                    : e.source === "regular"
+                      ? "기존 정기 운동 기록"
+                      : "추가 운동"}
+                  {e.distance !== undefined ? ` · ${e.distance}km` : ""}
+                </p>
+                <div className="record-actions">
+                  <button
+                    onClick={() => {
+                      setError("");
+                      setExercise(e);
+                    }}
+                  >
+                    수정
+                  </button>
+                  <button
+                    onClick={() => setDeletion({ kind: "exercise", id: e.id })}
+                  >
+                    삭제
+                  </button>
+                </div>
+              </div>
+            ))}
+            <Action disabled={!canRecord || busy} onClick={newExercise}>
+              추가 운동 기록
+            </Action>
+          </Card>
+        </>
       )}
       {meal && (
         <Modal title="음식 기록" onClose={() => setMeal(null)}>
@@ -330,6 +364,38 @@ export default function Records({
               onChange={(v) => setMeal({ ...meal, type: v as MealType })}
               options={mealLabels}
             />
+            {previousFoods.length > 0 && (
+              <Select
+                label="음식 선택"
+                value={mealPreset}
+                onChange={(value) => {
+                  setMealPreset(value);
+                  if (value === "manual") {
+                    if (mealPreset !== "manual")
+                      setMeal({ ...meal, name: "", calories: NaN });
+                    return;
+                  }
+                  const selected = previousFoods.find(
+                    (item) => foodOptionValue(item) === value,
+                  );
+                  if (selected)
+                    setMeal({
+                      ...meal,
+                      name: selected.name,
+                      calories: selected.calories,
+                    });
+                }}
+                options={{
+                  manual: "직접 입력",
+                  ...Object.fromEntries(
+                    previousFoods.map((item) => [
+                      foodOptionValue(item),
+                      `${item.name} · ${kcal(item.calories)}`,
+                    ]),
+                  ),
+                }}
+              />
+            )}
             <Field
               label="음식 이름"
               required
@@ -386,7 +452,12 @@ export default function Records({
               min={1}
               max={1440}
               value={exercise.minutes}
-              onChange={(v) => setExercise({ ...exercise, minutes: Number(v) })}
+              onChange={(v) =>
+                setExercise({
+                  ...exercise,
+                  minutes: v === "" ? NaN : Number(v),
+                })
+              }
             />
             <Select
               label="운동 강도"
@@ -429,18 +500,6 @@ export default function Records({
               직접 입력 시 안정 시 소비량을 제외한 값으로 입력해주세요. 거리
               대신 시간과 강도로 계산해요.
             </p>
-            <Select
-              label="운동 구분"
-              value={exercise.source}
-              onChange={(v) =>
-                setExercise({ ...exercise, source: v as Exercise["source"] })
-              }
-              options={{
-                regular: "정기 운동 계획에 포함",
-                extra: "추가 운동",
-                daily: "이미 일상 활동량에 포함",
-              }}
-            />
             <Metric
               label="예상 순소비량"
               value={kcal(
@@ -464,54 +523,9 @@ export default function Records({
           </form>
         </Modal>
       )}
-      {completion && stats && (
-        <Modal
-          title={
-            stats.complete ? "기록을 다시 열까요?" : "하루 기록을 완료할까요?"
-          }
-          onClose={() => setCompletion(false)}
-        >
-          <p>
-            {stats.complete
-              ? "완료 표시를 해제하고 누적 통계에서 제외해요."
-              : "모든 식사와 운동을 기록했는지 확인해주세요. 미기록 식사는 섭취 없음으로 처리돼요."}
-          </p>
-          <Metric
-            label="현재 기록 기준 수지"
-            value={balanceText(stats.balance)}
-          />
-          {stats.intake === 0 && !stats.complete && (
-            <p className="warning">완료하면 실제 섭취량 0kcal로 저장돼요.</p>
-          )}
-          {error && (
-            <p role="alert" className="error">
-              {error}
-            </p>
-          )}
-          <Action
-            disabled={busy}
-            onClick={() => {
-              void save({
-                ...wallet,
-                meta: {
-                  ...wallet.meta,
-                  updatedAt: new Date().toISOString(),
-                  completedDays: stats.complete
-                    ? wallet.meta.completedDays.filter((d) => d !== date)
-                    : [...wallet.meta.completedDays, date],
-                },
-              })
-                .then(() => setCompletion(false))
-                .catch((e) => setError(errorMessage(e)));
-            }}
-          >
-            확인
-          </Action>
-        </Modal>
-      )}
       {deletion && (
         <Modal title="이 기록을 삭제할까요?" onClose={() => setDeletion(null)}>
-          <p>삭제 후 하루 기록 완료 표시가 해제돼요.</p>
+          <p>삭제한 기록은 해당 날짜와 누적 잔고에 바로 반영돼요.</p>
           {error && <p role="alert">{error}</p>}
           <Action disabled={busy} onClick={() => void remove()}>
             삭제하기

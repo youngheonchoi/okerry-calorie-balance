@@ -97,9 +97,12 @@ export type Exercise = Stamp & {
   weight: number;
 };
 export type Weight = Stamp & { date: DateKey; weight: number };
+export type WorkoutStatus = Stamp & { date: DateKey; workedOut: boolean };
 export type Meta = Stamp & {
   startedOn: DateKey;
   completedDays: DateKey[];
+  workoutStatus: WorkoutStatus[];
+  hiddenFoodKeywords: string[];
   initialized: boolean;
 };
 export type Wallet = {
@@ -150,6 +153,8 @@ export function emptyWallet(date: string): Wallet {
       ...stamp(),
       startedOn: date,
       completedDays: [],
+      workoutStatus: [],
+      hiddenFoodKeywords: [],
       initialized: false,
     },
   };

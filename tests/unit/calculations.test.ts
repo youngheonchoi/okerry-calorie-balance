@@ -117,6 +117,31 @@ describe("energy accounting", () => {
       ),
     ).toBeCloseTo(t.rest + 551.25);
   });
+  it("uses exercise-day TDEE when a planned workout is marked and adds extra workouts", () => {
+    const t = fixture().tdee_history[0];
+    expect(
+      calculateDailyExpenditure(
+        t,
+        [exercise(), exercise({ source: "extra" })],
+        "2026-10-01",
+        true,
+      ),
+    ).toBeCloseTo(t.exerciseDay + 275.625);
+  });
+  it("respects an explicit no-workout selection over legacy regular exercise entries", () => {
+    const t = fixture().tdee_history[0];
+    expect(
+      calculateDailyExpenditure(t, [exercise()], "2026-10-01", false),
+    ).toBe(t.rest);
+  });
+  it("applies a saved workout status to the daily balance", () => {
+    const w = fixture(),
+      t = w.tdee_history[0];
+    w.meta.workoutStatus = [
+      { ...stamp(), date: "2026-10-01", workedOut: true },
+    ];
+    expect(daily(w, "2026-10-01")?.expenditure).toBe(t.exerciseDay);
+  });
   it("separates remaining budget and energy deficit", () => {
     const w = fixture();
     w.meals = [
@@ -151,15 +176,14 @@ describe("energy accounting", () => {
     expect(daily(w, "2026-10-01")).toEqual(before);
     expect(daily(w, "2026-10-10")!.goalBalance).toBe(200);
   });
-  it("does not treat missing meals as zero intake in cumulative balance", () => {
+  it("includes unrecorded dates as zero intake in cumulative balance", () => {
     const w = fixture();
-    expect(calculateTotalBalance(w, "2026-10-03").balance).toBe(0);
-    w.meta.completedDays = ["2026-10-01"];
     expect(calculateTotalBalance(w, "2026-10-03").balance).toBe(
-      -w.tdee_history[0].rest,
+      -w.tdee_history[0].rest * 3,
     );
+    expect(calculateTotalBalance(w, "2026-10-03").completed).toBe(3);
   });
-  it("excludes future expenditure even if erroneously marked complete", () => {
+  it("excludes future expenditure from automatic cumulative balance", () => {
     const w = fixture();
     w.meta.completedDays = ["2026-10-01", "2026-10-02"];
     const total = calculateCycleBalance(
