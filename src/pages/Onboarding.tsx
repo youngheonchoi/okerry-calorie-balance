@@ -504,7 +504,7 @@ export default function Onboarding({
               <h2>설정한 목표</h2>
               <Metric label="관리 목표" value={goalLabels[goal.kind]} />
               <Metric
-                label="하루 목표 칼로리 잔고"
+                label="하루 목표 칼로리 적자"
                 value={
                   goal.balance === 0
                     ? "균형 유지"
