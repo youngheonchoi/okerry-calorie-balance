@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { Action, Card, Field, Metric, Modal, Select } from "../components/ui";
 import {
   calculateExerciseCalories,
-  getCycleDateRange,
   effective,
   localDate,
 } from "../domain/calculations";
@@ -24,7 +23,6 @@ export default function Records({
   wallet,
   kind,
   date,
-  setDate,
   mealType,
   save,
   busy,
@@ -32,7 +30,6 @@ export default function Records({
   wallet: Wallet;
   kind: "meal" | "exercise";
   date: string;
-  setDate: (d: string) => void;
   mealType?: MealType;
   save: (w: Wallet) => Promise<void>;
   busy: boolean;
@@ -66,21 +63,7 @@ export default function Records({
       .values(),
   );
   const today = localDate();
-  const cycle =
-    effective(wallet.cycle_history, date) ??
-    wallet.cycle_history
-      .slice()
-      .sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom))[0];
-  const cycleRange = cycle
-    ? getCycleDateRange(date, { ...cycle, kind: "weekly", days: 7 })
-    : { start: date, end: date };
   const canRecord = date <= today;
-  const workoutStatus = wallet.meta.workoutStatus.find(
-    (item) => item.date === date,
-  );
-  useEffect(() => {
-    if (date < wallet.meta.startedOn) setDate(wallet.meta.startedOn);
-  }, [date, setDate, wallet.meta.startedOn]);
   useEffect(() => {
     if (kind === "meal" && mealType)
       document
@@ -122,7 +105,8 @@ export default function Records({
           meta: {
             ...wallet.meta,
             hiddenFoodKeywords: wallet.meta.hiddenFoodKeywords.filter(
-              (name) => normalizeFoodName(name) !== normalizeFoodName(item.name),
+              (name) =>
+                normalizeFoodName(name) !== normalizeFoodName(item.name),
             ),
             updatedAt: new Date().toISOString(),
           },
@@ -181,51 +165,9 @@ export default function Records({
       setError(errorMessage(e));
     }
   }
-  async function setWorkoutStatus(workedOut: boolean) {
-    setError("");
-    const now = new Date().toISOString();
-    const previous = wallet.meta.workoutStatus.find(
-      (item) => item.date === date,
-    );
-    const status = previous
-      ? { ...previous, workedOut, updatedAt: now }
-      : { ...stamp(), date, workedOut };
-    try {
-      await save({
-        ...wallet,
-        meta: {
-          ...wallet.meta,
-          workoutStatus: [
-            ...wallet.meta.workoutStatus.filter((item) => item.date !== date),
-            status,
-          ],
-          updatedAt: now,
-        },
-      });
-    } catch (e) {
-      setError(errorMessage(e));
-    }
-  }
   return (
     <>
       <h1>{kind === "meal" ? "무엇을 드셨나요?" : "어떻게 움직였나요?"}</h1>
-      <Field
-        label="기록 날짜"
-        type="date"
-        value={date}
-        min={
-          cycleRange.start < wallet.meta.startedOn
-            ? wallet.meta.startedOn
-            : cycleRange.start
-        }
-        max={cycleRange.end}
-        onChange={(v) => {
-          if (v) setDate(v);
-        }}
-      />
-      <p className="hint">
-        이번 관리 주기: {cycleRange.start} ~ {cycleRange.end}
-      </p>
       {!canRecord && (
         <p className="notice">오늘 이후 날짜는 기록할 수 없어요.</p>
       )}
@@ -255,7 +197,7 @@ export default function Records({
                     <button
                       onClick={() => {
                         setError("");
-                    setMealPreset("manual");
+                        setMealPreset("manual");
                         setMeal(m);
                       }}
                     >
@@ -281,36 +223,9 @@ export default function Records({
       ) : (
         <>
           <Card>
-            <h2>설정한 운동 루틴을 진행하셨나요?</h2>
-            <p className="hint">
-              처음 계산 때 설정한 운동 습관을 말해요. 추가로 한 운동은 아래에
-              따로 기록할 수 있어요.
-            </p>
-            <div className="choices" role="group" aria-label="정기 운동 여부">
-              <button
-                type="button"
-                className={`choice${workoutStatus?.workedOut === true ? " selected" : ""}`}
-                aria-pressed={workoutStatus?.workedOut === true}
-                disabled={!canRecord || busy}
-                onClick={() => void setWorkoutStatus(true)}
-              >
-                운동했어요
-              </button>
-              <button
-                type="button"
-                className={`choice${workoutStatus?.workedOut === false ? " selected" : ""}`}
-                aria-pressed={workoutStatus?.workedOut === false}
-                disabled={!canRecord || busy}
-                onClick={() => void setWorkoutStatus(false)}
-              >
-                운동 안 했어요
-              </button>
-            </div>
-          </Card>
-          <Card>
-            <h2>추가 운동 내역</h2>
+            <h2>운동 내역</h2>
             {exercises.length === 0 && (
-              <p className="empty">추가로 한 운동이 있으면 기록해보세요.</p>
+              <p className="empty">운동한 내역을 기록해보세요.</p>
             )}
             {exercises.map((e) => (
               <div className="record" key={e.id}>
@@ -324,7 +239,7 @@ export default function Records({
                     ? "일상 활동에 포함"
                     : e.source === "regular"
                       ? "기존 정기 운동 기록"
-                      : "추가 운동"}
+                      : "운동 기록"}
                   {e.distance !== undefined ? ` · ${e.distance}km` : ""}
                 </p>
                 <div className="record-actions">
@@ -345,7 +260,7 @@ export default function Records({
               </div>
             ))}
             <Action disabled={!canRecord || busy} onClick={newExercise}>
-              추가 운동 기록
+              운동 기록 추가
             </Action>
           </Card>
         </>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type TouchEvent } from "react";
 import { Action, Card, Icon } from "./components/ui";
 import { draftStore, repository } from "./data/sdk";
 import {
@@ -14,19 +14,24 @@ import {
   type Wallet,
 } from "./domain/model";
 import Home from "./pages/Home";
+import Activity from "./pages/Activity";
+import Calendar from "./pages/Calendar";
 import Records from "./pages/Records";
 import My from "./pages/My";
 import Onboarding from "./pages/Onboarding";
 import "./App.css";
 import { SafeArea, graniteEvent } from "@apps-in-toss/web-framework";
 import { errorMessage } from "./domain/format";
-type Tab = "home" | "meal" | "exercise" | "my";
+type Tab = "home" | "activity" | "records" | "calendar" | "my";
+type RecordKind = "meal" | "exercise";
 const tabs: Record<Tab, string> = {
   home: "홈",
-  meal: "식단",
-  exercise: "운동",
+  activity: "활동",
+  records: "기록",
+  calendar: "캘린더",
   my: "마이",
 };
+const tabEntries = Object.entries(tabs) as [Tab, string][];
 export default function App() {
   const [wallet, setWallet] = useState<Wallet | null>(null),
     [loading, setLoading] = useState(true),
@@ -34,11 +39,13 @@ export default function App() {
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [tab, setTab] = useState<Tab>("home"),
+    [recordKind, setRecordKind] = useState<RecordKind>("meal"),
     [onboarding, setOnboarding] = useState(false),
     [date, setDate] = useState(localDate),
     [today, setToday] = useState(localDate),
     [mealType, setMealType] = useState<MealType | undefined>();
   const saving = useRef(false);
+  const recordSwipeStart = useRef<{ x: number; y: number } | null>(null);
   async function load() {
     setLoading(true);
     setLoadError("");
@@ -97,6 +104,9 @@ export default function App() {
       window.removeEventListener("focus", refresh);
     };
   }, []);
+  useEffect(() => {
+    setDate(today);
+  }, [today]);
   async function save(next: Wallet) {
     if (saving.current)
       throw new Error("이전 저장이 끝난 뒤 다시 시도해주세요");
@@ -118,14 +128,45 @@ export default function App() {
     setTab(next);
     window.scrollTo(0, 0);
   }
-  function openRecords(
-    kind: "meal" | "exercise",
-    day: string,
-    type?: MealType,
-  ) {
+  function openRecords(kind: RecordKind, day: string, type?: MealType) {
+    setRecordKind(kind);
     setDate(day);
     setMealType(type);
-    changeTab(kind);
+    changeTab("records");
+  }
+  function startRecordSwipe(event: TouchEvent<HTMLDivElement>) {
+    recordSwipeStart.current = null;
+    if (event.touches.length !== 1 || document.querySelector("dialog[open]"))
+      return;
+    if (
+      event.target instanceof Element &&
+      event.target.closest(
+        "button, input, select, textarea, a, dialog, [role='button'], [contenteditable='true']",
+      )
+    )
+      return;
+    recordSwipeStart.current = {
+      x: event.touches[0].clientX,
+      y: event.touches[0].clientY,
+    };
+  }
+  function endRecordSwipe(event: TouchEvent<HTMLDivElement>) {
+    const start = recordSwipeStart.current;
+    recordSwipeStart.current = null;
+    if (
+      !start ||
+      event.changedTouches.length !== 1 ||
+      busy ||
+      document.querySelector("dialog[open]")
+    )
+      return;
+    const dx = event.changedTouches[0].clientX - start.x;
+    const dy = event.changedTouches[0].clientY - start.y;
+    if (Math.abs(dx) < 60 || Math.abs(dx) <= Math.abs(dy) * 1.5) return;
+    if (dx < 0 && recordKind === "meal") setRecordKind("exercise");
+    else if (dx > 0 && recordKind === "exercise") setRecordKind("meal");
+    else return;
+    setMealType(undefined);
   }
   async function reset() {
     if (saving.current) return;
@@ -142,6 +183,11 @@ export default function App() {
     }
   }
   const initialized = wallet?.meta.initialized === true;
+  const missingToday: Partial<Record<Tab, boolean>> = {
+    activity: !wallet?.meta.activityRecords.some((item) => item.date === today),
+    records: !wallet?.meals.some((item) => item.date === today),
+  };
+  const activeTabIndex = tabEntries.findIndex(([key]) => key === tab);
   const initial: Profile | undefined = initialized
     ? (effective(wallet.tdee_history, addDays(today, 1))?.profile ??
       wallet.profile ??
@@ -252,21 +298,73 @@ export default function App() {
                 <Home
                   key={today}
                   wallet={wallet}
+                  openActivity={() => changeTab("activity")}
                   openRecords={openRecords}
                   today={today}
                 />
               )}
-              {(tab === "meal" || tab === "exercise") && (
-                <Records
-                  key={tab}
+              {tab === "activity" && (
+                <Activity
+                  key={today}
                   wallet={wallet}
-                  kind={tab}
-                  date={date}
-                  setDate={setDate}
-                  mealType={mealType}
+                  today={today}
                   save={save}
                   busy={busy}
                 />
+              )}
+              {tab === "records" && (
+                <div
+                  className="record-swipe-area"
+                  onTouchStart={startRecordSwipe}
+                  onTouchEnd={endRecordSwipe}
+                  onTouchCancel={() => {
+                    recordSwipeStart.current = null;
+                  }}
+                >
+                  <div
+                    className="record-kind-switch"
+                    role="group"
+                    aria-label="기록 종류"
+                    data-kind={recordKind}
+                  >
+                    <button
+                      type="button"
+                      aria-pressed={recordKind === "meal"}
+                      onClick={() => {
+                        setRecordKind("meal");
+                        setMealType(undefined);
+                      }}
+                    >
+                      식단
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={recordKind === "exercise"}
+                      onClick={() => {
+                        setRecordKind("exercise");
+                        setMealType(undefined);
+                      }}
+                    >
+                      운동
+                    </button>
+                  </div>
+                  <div
+                    key={recordKind}
+                    className={`record-swipe-panel ${recordKind}`}
+                  >
+                    <Records
+                      wallet={wallet}
+                      kind={recordKind}
+                      date={date}
+                      mealType={mealType}
+                      save={save}
+                      busy={busy}
+                    />
+                  </div>
+                </div>
+              )}
+              {tab === "calendar" && (
+                <Calendar key={today} wallet={wallet} today={today} />
               )}
               {tab === "my" && (
                 <My
@@ -281,28 +379,46 @@ export default function App() {
                 />
               )}
               <nav className="floating-tabs" aria-label="주 메뉴">
-                {(Object.entries(tabs) as [Tab, string][]).map(
-                  ([key, label]) => (
+                <div className="floating-tabs-track">
+                  <span
+                    className="floating-tabs-indicator"
+                    aria-hidden="true"
+                    style={{
+                      width: `${100 / tabEntries.length}%`,
+                      transform: `translateX(${activeTabIndex * 100}%)`,
+                    }}
+                  />
+                  {tabEntries.map(([key, label]) => (
                     <button
                       key={key}
                       aria-current={tab === key ? "page" : undefined}
+                      aria-description={
+                        missingToday[key]
+                          ? key === "records"
+                            ? "오늘 식단 미기록"
+                            : `오늘 ${label} 미기록`
+                          : undefined
+                      }
                       className={tab === key ? "active" : ""}
                       onClick={() => {
-                        // The exercise tab may retain a past date after browsing
-                        // records. Entering it from Home should use today's date
-                        // so its workout choice updates today's Home summary.
-                        if (tab === "home" && key === "exercise") {
+                        if (key === "records") {
                           setDate(today);
+                          setRecordKind("meal");
                         }
                         setMealType(undefined);
                         changeTab(key);
                       }}
                     >
-                      <Icon name={key} />
+                      <span className="tab-icon">
+                        <Icon name={key} />
+                        {missingToday[key] && (
+                          <span className="tab-alert" aria-hidden="true" />
+                        )}
+                      </span>
                       <span>{label}</span>
                     </button>
-                  ),
-                )}
+                  ))}
+                </div>
               </nav>
             </>
           )}

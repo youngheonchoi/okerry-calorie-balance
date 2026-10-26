@@ -9,7 +9,7 @@ import {
   type Goal,
   type Wallet,
 } from "../domain/model";
-import { cycleSchema, dateSchema, goalSchema } from "../domain/validation";
+import { cycleSchema, goalSchema } from "../domain/validation";
 import { CycleFields, GoalFields } from "./Onboarding";
 const normalizeFoodName = (name: string) => name.trim().toLocaleLowerCase();
 
@@ -31,9 +31,7 @@ export default function My({
   const currentTdee = effective(wallet.tdee_history, today)!,
     currentGoal = effective(wallet.goal_history, today)!,
     currentCycle = effective(wallet.cycle_history, today)!;
-  const [edit, setEdit] = useState<
-    "goal" | "cycle" | "start-date" | "reset" | null
-  >(null);
+  const [edit, setEdit] = useState<"goal" | "cycle" | "reset" | null>(null);
   const [goal, setGoal] = useState<Goal>(currentGoal),
     [cycle, setCycle] = useState<Cycle>({
       ...currentCycle,
@@ -42,7 +40,6 @@ export default function My({
     }),
     [message, setMessage] = useState(""),
     [error, setError] = useState(""),
-    [startDate, setStartDate] = useState(wallet.meta.startedOn),
     [resetText, setResetText] = useState("");
   const [keywordsOpen, setKeywordsOpen] = useState(false);
   const [keywordError, setKeywordError] = useState("");
@@ -118,41 +115,6 @@ export default function My({
           ],
         });
       }
-      if (edit === "start-date") {
-        const date = dateSchema.parse(startDate);
-        if (date > today) throw new Error("오늘 이전 날짜를 선택해주세요");
-        const withBaseline = <
-          T extends {
-            effectiveFrom: string;
-            id: string;
-            createdAt: string;
-            updatedAt: string;
-          },
-        >(
-          history: T[],
-        ): T[] => {
-          if (history.some((item) => item.effectiveFrom <= date))
-            return history;
-          const first = history
-            .slice()
-            .sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom))[0];
-          return first
-            ? [...history, { ...first, ...stamp(), effectiveFrom: date }]
-            : history;
-        };
-        await save({
-          ...wallet,
-          tdee_history: withBaseline(wallet.tdee_history),
-          goal_history: withBaseline(wallet.goal_history),
-          cycle_history: withBaseline(wallet.cycle_history),
-          meta: {
-            ...wallet.meta,
-            startedOn: date,
-            completedDays: wallet.meta.completedDays.filter((d) => d >= date),
-            updatedAt: new Date().toISOString(),
-          },
-        });
-      }
       if (edit === "reset") {
         if (resetText !== "초기화") throw new Error("초기화를 입력해주세요");
         await reset();
@@ -163,9 +125,7 @@ export default function My({
           ? "초기화했어요"
           : edit === "goal"
             ? "목표를 오늘부터 적용했어요"
-            : edit === "cycle"
-              ? "관리 주기를 오늘부터 적용했어요. 과거 기록 기준은 보존돼요."
-              : "기록 시작일을 변경했어요",
+            : "관리 주기를 오늘부터 적용했어요. 과거 기록 기준은 보존돼요.",
       );
     } catch (e) {
       setError(errorMessage(e));
@@ -175,7 +135,6 @@ export default function My({
     setError("");
     setMessage("");
     if (kind === "goal") setGoal(currentGoal);
-    if (kind === "start-date") setStartDate(wallet.meta.startedOn);
     if (kind === "cycle") {
       const nextCycle = effective(wallet.cycle_history, today) ?? currentCycle;
       setCycle({ ...nextCycle, kind: "weekly", days: 7 });
@@ -248,17 +207,6 @@ export default function My({
         </Action>
       </Card>
       <Card>
-        <h2>기록 시작일</h2>
-        <Metric label="누적 통계 시작일" value={wallet.meta.startedOn} />
-        <Action secondary onClick={() => open("start-date")}>
-          시작일 변경
-        </Action>
-        <p className="hint">
-          설정한 날짜부터 누적 통계를 계산해요. 과거 날짜를 기록하려면 먼저
-          시작일을 변경해주세요.
-        </p>
-      </Card>
-      <Card>
         <h2>데이터 초기화</h2>
         <p>기록은 이 기기에 저장돼요.</p>
         <div className="stack">
@@ -290,9 +238,7 @@ export default function My({
               ? "목표 재설정"
               : edit === "cycle"
                 ? "관리 주기 변경"
-                : edit === "start-date"
-                  ? "기록 시작일 변경"
-                  : "모든 데이터를 초기화할까요?"
+                : "모든 데이터를 초기화할까요?"
           }
           onClose={() => setEdit(null)}
         >
@@ -318,21 +264,6 @@ export default function My({
             <p className="notice">
               저장하면 오늘부터 적용해요. 과거 통계의 기준은 보존해요.
             </p>
-          )}
-          {edit === "start-date" && (
-            <>
-              <Field
-                label="누적 통계 시작일"
-                type="date"
-                value={startDate}
-                max={today}
-                onChange={setStartDate}
-              />
-              <p className="notice">
-                이 날짜부터 누적 통계에 포함하고, 이후 날짜의 식단·운동을 기록할
-                수 있어요.
-              </p>
-            </>
           )}
           {edit === "reset" && (
             <>

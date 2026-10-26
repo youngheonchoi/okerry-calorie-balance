@@ -47,6 +47,25 @@ describe("Storage transaction recovery", () => {
     for (const value of store.data.values())
       expect(JSON.parse(value).schemaVersion).toBe(1);
   });
+  it("persists a daily activity record across reloads", async () => {
+    const store = new MemoryStore();
+    const repo = createRepository(store);
+    const wallet = fixture();
+    wallet.meta.activityRecords = [
+      {
+        id: "activity-1",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        date: "2026-10-01",
+        steps: null,
+        movement: "steps3000to6000",
+      },
+    ];
+    await repo.save(wallet);
+    expect(
+      (await createRepository(store).load())?.meta.activityRecords,
+    ).toEqual(wallet.meta.activityRecords);
+  });
   it.each(fields)(
     "restores original data if %s fails mid-save",
     async (field) => {

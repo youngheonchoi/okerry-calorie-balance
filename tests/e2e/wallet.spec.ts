@@ -133,27 +133,184 @@ test("short onboarding saves its summary and resumes the completed wallet", asyn
   expect(saved.cycles[0].weekday).toBe(3);
 });
 
-test("daily workout choice changes the home TDEE and can be toggled back", async ({
+test("exercise records no longer ask about a preset routine", async ({
   page,
 }) => {
   await onboard(page);
   await expect(
     page.getByText("오늘 비운동일 TDEE", { exact: true }),
-  ).toBeVisible();
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "기록", exact: true }).click();
+  await expect(page.getByLabel("기록 날짜")).toHaveCount(0);
   await page.getByRole("button", { name: "운동", exact: true }).click();
-  await page.getByRole("button", { name: "운동했어요", exact: true }).click();
-  await page.getByRole("button", { name: "홈", exact: true }).click();
+  await expect(page.getByLabel("기록 날짜")).toHaveCount(0);
   await expect(
-    page.getByText("오늘 운동일 TDEE", { exact: true }),
+    page.getByText("설정한 운동 루틴을 진행하셨나요?", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "운동 내역", exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "운동 기록 추가" }),
+  ).toBeVisible();
+});
+
+test("today's missing records mark activity and records tabs", async ({
+  page,
+}) => {
+  await onboard(page);
+  const activityTab = page.getByRole("button", { name: "활동", exact: true });
+  const recordsTab = page.getByRole("button", { name: "기록", exact: true });
+  await expect(activityTab.locator(".tab-alert")).toHaveCount(1);
+  await expect(recordsTab.locator(".tab-alert")).toHaveCount(1);
+  await activityTab.click();
+  await expect(page.getByRole("heading", { name: "기록한 운동" })).toHaveCount(
+    0,
+  );
+  await expect(page.locator(".activity-level")).toHaveCount(6);
+  await page.getByRole("button", { name: "3,000~6,000보 미만" }).click();
+  await expect(activityTab.locator(".tab-alert")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: /3,000~6,000보 미만/ }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "6,000~9,000보 미만" }).click();
+  await expect(
+    page.getByRole("button", { name: /6,000~9,000보 미만/ }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await recordsTab.click();
+  await page.getByRole("button", { name: "아침 추가", exact: true }).click();
+  await page.getByLabel("음식 이름", { exact: true }).fill("아침 식사");
+  await page.getByLabel("칼로리 (kcal)", { exact: true }).fill("350");
+  await page.getByRole("button", { name: "저장하기", exact: true }).click();
+  await expect(recordsTab.locator(".tab-alert")).toHaveCount(0);
   await page.getByRole("button", { name: "운동", exact: true }).click();
-  await page
-    .getByRole("button", { name: "운동 안 했어요", exact: true })
-    .click();
-  await page.getByRole("button", { name: "홈", exact: true }).click();
+  await page.getByRole("button", { name: "운동 기록 추가" }).click();
+  await page.getByRole("button", { name: "저장하기", exact: true }).click();
+  await page.getByRole("button", { name: "캘린더", exact: true }).click();
+  await expect(page.getByText("아침 식사", { exact: false })).toBeVisible();
   await expect(
-    page.getByText("오늘 비운동일 TDEE", { exact: true }),
+    page.getByText("6,000~9,000보 미만", { exact: true }),
   ).toBeVisible();
+  const selectedDay = page.locator(".calendar-day.selected");
+  await expect(selectedDay.locator(".calendar-marker")).toHaveCount(3);
+  expect(
+    await selectedDay
+      .locator(".calendar-marker")
+      .evaluateAll(
+        (markers) =>
+          new Set(
+            markers.map((marker) => getComputedStyle(marker).backgroundColor),
+          ).size,
+      ),
+  ).toBe(3);
+  expect(
+    await page
+      .locator(".calendar-grid-wrap")
+      .evaluate((element) => element.getBoundingClientRect().width),
+  ).toBeGreaterThan(308);
+  await page.setViewportSize({ width: 320, height: 740 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  expect(
+    await page
+      .locator(".calendar-day:not(:disabled)")
+      .first()
+      .evaluate((button) => button.getBoundingClientRect().width),
+  ).toBeGreaterThanOrEqual(44);
+  await page.reload();
+  await expect(activityTab.locator(".tab-alert")).toHaveCount(0);
+  await expect(recordsTab.locator(".tab-alert")).toHaveCount(0);
+  await page.getByRole("button", { name: "홈", exact: true }).click();
+  await expect(page.locator(".home-action-stage.done")).toHaveCount(3);
+});
+
+test("activity changes today's TDEE and exercise adds to it", async ({
+  page,
+}) => {
+  await onboard(page);
+  const balance = async () =>
+    Number(
+      (await page.locator(".hero-number").innerText()).replace(/[^\d]/g, ""),
+    );
+  const initialBalance = await balance();
+  await page.getByRole("button", { name: "활동", exact: true }).click();
+  await page.getByRole("button", { name: "15,000보 이상" }).click();
+  await page.getByRole("button", { name: "홈", exact: true }).click();
+  const afterActivity = await balance();
+  expect(afterActivity).toBeGreaterThan(initialBalance);
+  await page.getByRole("button", { name: "기록", exact: true }).click();
+  await page.getByRole("button", { name: "운동", exact: true }).click();
+  await page.getByRole("button", { name: "운동 기록 추가" }).click();
+  await page.getByRole("button", { name: "저장하기", exact: true }).click();
+  await page.getByRole("button", { name: "홈", exact: true }).click();
+  expect(await balance()).toBeGreaterThan(afterActivity);
+});
+
+test.describe("record tab swipe", () => {
+  test.use({ isMobile: true, hasTouch: true });
+
+  test("switches sideways without changing tabs on vertical gestures or in dialogs", async ({
+    page,
+  }) => {
+    await onboard(page);
+    await page.getByRole("button", { name: "기록", exact: true }).click();
+    const mealTab = page.getByRole("button", { name: "식단", exact: true });
+    const exerciseTab = page.getByRole("button", { name: "운동", exact: true });
+    const session = await page.context().newCDPSession(page);
+    const swipe = async (
+      startX: number,
+      startY: number,
+      endX: number,
+      endY: number,
+    ) => {
+      await session.send("Input.dispatchTouchEvent", {
+        type: "touchStart",
+        touchPoints: [{ x: startX, y: startY }],
+      });
+      for (let step = 1; step <= 5; step++)
+        await session.send("Input.dispatchTouchEvent", {
+          type: "touchMove",
+          touchPoints: [
+            {
+              x: startX + ((endX - startX) * step) / 5,
+              y: startY + ((endY - startY) * step) / 5,
+            },
+          ],
+        });
+      await session.send("Input.dispatchTouchEvent", {
+        type: "touchEnd",
+        touchPoints: [],
+      });
+    };
+    const heading = await page.locator(".record-swipe-area h1").boundingBox();
+    expect(heading).not.toBeNull();
+    const y = Math.round(heading!.y + heading!.height / 2);
+    await swipe(300, y, 80, y);
+    await expect(exerciseTab).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(".record-swipe-panel.exercise")).toHaveCSS(
+      "animation-name",
+      "record-panel-from-right",
+    );
+    await swipe(80, y, 300, y);
+    await expect(mealTab).toHaveAttribute("aria-pressed", "true");
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect(page.locator(".record-swipe-panel.meal")).toHaveCSS(
+      "animation-name",
+      "none",
+    );
+    await swipe(300, y, 280, y + 120);
+    await expect(mealTab).toHaveAttribute("aria-pressed", "true");
+    await page.getByRole("button", { name: "아침 추가", exact: true }).click();
+    const dialogHeading = await page.locator("dialog h2").boundingBox();
+    expect(dialogHeading).not.toBeNull();
+    await swipe(300, dialogHeading!.y + 10, 80, dialogHeading!.y + 10);
+    await expect(mealTab).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await session.detach();
+  });
 });
 
 test("first setup, CRUD, persistence, settings and reset", async ({ page }) => {
@@ -164,7 +321,7 @@ test("first setup, CRUD, persistence, settings and reset", async ({ page }) => {
     path: "test-results/home-empty.png",
     fullPage: true,
   });
-  await page.getByRole("button", { name: "식단 기록", exact: true }).click();
+  await page.getByRole("button", { name: /식단 기록/ }).click();
   await page.getByRole("button", { name: "아침 추가", exact: true }).click();
   await page.getByLabel("음식 이름", { exact: true }).fill("테스트 현미밥");
   await page.getByLabel("칼로리 (kcal)", { exact: true }).fill("350");
@@ -192,7 +349,6 @@ test("first setup, CRUD, persistence, settings and reset", async ({ page }) => {
   await page
     .getByLabel("추가 소비량 직접 입력 (kcal, 선택)", { exact: true })
     .fill("200");
-  await page.getByLabel("운동 구분", { exact: true }).selectOption("regular");
   await page.getByRole("button", { name: "저장하기", exact: true }).click();
   await expect(
     page.locator(".record").getByText("200 kcal", { exact: true }),
@@ -203,14 +359,10 @@ test("first setup, CRUD, persistence, settings and reset", async ({ page }) => {
     .fill("250");
   await page.getByRole("button", { name: "저장하기", exact: true }).click();
   await page.getByRole("button", { name: "홈", exact: true }).click();
-  await expect(
-    page.getByText("기록을 저장하면 잔고에 바로 반영돼요.", { exact: true }),
-  ).toBeVisible();
+  await expect(page.locator(".home-action-stage.done")).toHaveCount(2);
   await page.reload();
   await expect(page.locator(".balance-card")).toBeVisible();
-  await expect(
-    page.getByText("기록을 저장하면 잔고에 바로 반영돼요.", { exact: true }),
-  ).toBeVisible();
+  await expect(page.locator(".home-action-stage.done")).toHaveCount(2);
   await page.getByRole("button", { name: "마이", exact: true }).click();
   await page.getByRole("button", { name: "목표 재설정", exact: true }).click();
   await page
@@ -224,10 +376,7 @@ test("first setup, CRUD, persistence, settings and reset", async ({ page }) => {
   await page
     .getByRole("button", { name: "관리 주기 변경", exact: true })
     .click();
-  await page
-    .getByLabel("칼로리 잔고를 어떤 주기로 관리할까요?", { exact: true })
-    .selectOption("custom");
-  await page.getByLabel("주기 일수", { exact: true }).fill("10");
+  await page.getByLabel("시작 요일", { exact: true }).selectOption("4");
   await page.getByRole("button", { name: "저장하기", exact: true }).click();
   await page
     .getByRole("button", { name: "모든 데이터 초기화", exact: true })
@@ -339,7 +488,7 @@ test("all tabs keep readable text and touch targets in light and dark modes", as
   await onboard(page);
   for (const scheme of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme: scheme });
-    for (const tab of ["홈", "식단", "운동", "마이"]) {
+    for (const tab of ["홈", "활동", "기록", "캘린더", "마이"]) {
       await page.getByRole("button", { name: tab, exact: true }).click();
       const issues = await page.locator(".app-shell").evaluate((root) => {
         const issues: string[] = [];
@@ -456,14 +605,15 @@ test.describe("mobile viewport gestures", () => {
       .poll(() => page.evaluate(() => window.visualViewport?.scale))
       .toBe(1);
     await page.getByRole("button", { name: "다음", exact: true }).click();
+    await page.setViewportSize({ width: 390, height: 400 });
     await session.send("Input.dispatchTouchEvent", {
       type: "touchStart",
-      touchPoints: [{ x: 180, y: 600 }],
+      touchPoints: [{ x: 180, y: 200 }],
     });
     for (let i = 1; i <= 5; i++)
       await session.send("Input.dispatchTouchEvent", {
         type: "touchMove",
-        touchPoints: [{ x: 180, y: 600 - i * 45 }],
+        touchPoints: [{ x: 180, y: 200 - i * 25 }],
       });
     await session.send("Input.dispatchTouchEvent", {
       type: "touchEnd",

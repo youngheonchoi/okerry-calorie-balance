@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { balanceText, kcal } from "../domain/format";
-import { Action, Card, Metric } from "../components/ui";
+import { Action, Card, Icon, Metric } from "../components/ui";
 import { homeDetailsStore } from "../data/sdk";
 import {
   addDays,
   calculateCycleBalance,
-  calculateTotalBalance,
   daily,
   effective,
   getCycleDateRange,
@@ -13,10 +12,12 @@ import {
 import { goalLabels, type MealType, type Wallet } from "../domain/model";
 export default function Home({
   wallet,
+  openActivity,
   openRecords,
   today,
 }: {
   wallet: Wallet;
+  openActivity: () => void;
   openRecords: (
     kind: "meal" | "exercise",
     date: string,
@@ -28,7 +29,6 @@ export default function Home({
   const detailsChanged = useRef(false);
   const stats = daily(wallet, today)!,
     goal = effective(wallet.goal_history, today)!,
-    tdee = effective(wallet.tdee_history, today)!,
     cycle = effective(wallet.cycle_history, today)!,
     cycleRange = getCycleDateRange(today, cycle);
   const cycleBalance = calculateCycleBalance(
@@ -37,10 +37,6 @@ export default function Home({
     cycleRange.end,
     today,
   ).balance;
-  const totalBalance = calculateTotalBalance(wallet, today).balance;
-  const startedOnLabel = new Date(
-    `${wallet.meta.startedOn}T12:00:00`,
-  ).toLocaleDateString("ko-KR", { month: "long", day: "numeric" });
   const cycleDays = Array.from({ length: 7 }, (_, index) => {
     const date = addDays(cycleRange.start, index);
     const dayStats = daily(wallet, date);
@@ -50,9 +46,11 @@ export default function Home({
       wallet.meta.workoutStatus.some((item) => item.date === date);
     return { date, dayStats, recorded };
   });
-  const workedOut = wallet.meta.workoutStatus.some(
-    (item) => item.date === today && item.workedOut,
+  const activityRecorded = wallet.meta.activityRecords.some(
+    (item) => item.date === today,
   );
+  const mealRecorded = wallet.meals.some((item) => item.date === today);
+  const exerciseRecorded = wallet.exercises.some((item) => item.date === today);
   useEffect(() => {
     void homeDetailsStore
       .get()
@@ -100,7 +98,9 @@ export default function Home({
         <button
           type="button"
           className="balance-toggle"
-          aria-label={detailsOpen ? "칼로리 상세 정보 접기" : "칼로리 상세 정보 펼치기"}
+          aria-label={
+            detailsOpen ? "칼로리 상세 정보 접기" : "칼로리 상세 정보 펼치기"
+          }
           aria-controls="home-balance-details"
           aria-expanded={detailsOpen}
           onClick={() => {
@@ -111,7 +111,13 @@ export default function Home({
           }}
         >
           <span>{detailsOpen ? "간략히 보기" : "자세히 보기"}</span>
-          <span className={detailsOpen ? "balance-chevron expanded" : "balance-chevron"}>▾</span>
+          <span
+            className={
+              detailsOpen ? "balance-chevron expanded" : "balance-chevron"
+            }
+          >
+            <Icon name="chevronDown" />
+          </span>
         </button>
         <div
           id="home-balance-details"
@@ -119,15 +125,7 @@ export default function Home({
           aria-hidden={!detailsOpen}
         >
           <div className="balance-details">
-            <div className="balance-context">
-              <Metric
-                label={workedOut ? "오늘 운동일 TDEE" : "오늘 비운동일 TDEE"}
-                value={kcal(workedOut ? tdee.exerciseDay : tdee.rest)}
-              />
-            </div>
-            <Metric label="오늘 가능 섭취량" value={kcal(stats.target)} />
             <Metric label="기록한 섭취량" value={kcal(stats.intake)} />
-            <hr className="balance-divider" />
             <Metric
               label={
                 goal.kind === "lose"
@@ -150,17 +148,56 @@ export default function Home({
           </div>
         </div>
       </Card>
-      <div className="two">
-        <Action onClick={() => openRecords("meal", today)}>식단 기록</Action>
-        <Action secondary onClick={() => openRecords("exercise", today)}>
-          운동 기록
-        </Action>
+      <div className="home-record-flow">
+        <p className="home-record-guide">1단계부터 기록해요</p>
+        <div className="home-record-actions">
+          <Action onClick={openActivity}>
+            <span className="home-action-content">
+              <span
+                className={`home-action-stage${activityRecorded ? " done" : ""}`}
+              >
+                1단계
+                {activityRecorded && (
+                  <span className="home-action-complete">완료</span>
+                )}
+              </span>
+              <span className="home-action-label">활동 기록</span>
+            </span>
+          </Action>
+          <Action onClick={() => openRecords("meal", today)}>
+            <span className="home-action-content">
+              <span
+                className={`home-action-stage${mealRecorded ? " done" : ""}`}
+              >
+                2단계
+                {mealRecorded && (
+                  <span className="home-action-complete">완료</span>
+                )}
+              </span>
+              <span className="home-action-label">식단 기록</span>
+            </span>
+          </Action>
+          <Action onClick={() => openRecords("exercise", today)}>
+            <span className="home-action-content">
+              <span
+                className={`home-action-stage${exerciseRecorded ? " done" : ""}`}
+              >
+                3단계
+                {exerciseRecorded && (
+                  <span className="home-action-complete">완료</span>
+                )}
+              </span>
+              <span className="home-action-label">운동 기록</span>
+            </span>
+          </Action>
+        </div>
       </div>
       <section className="cycle-week" aria-label="이번 주기 칼로리 기록">
         <div className="section-heading cycle-week-heading">
           <h2>이번 주기</h2>
           <span>
-            {cycleRange.start.slice(5).replace("-", ".")} ~ {cycleRange.end.slice(5).replace("-", ".")}
+            {cycleRange.start.slice(5).replace("-", ".")} ~{" "}
+            {cycleRange.end.slice(5).replace("-", ".")}
           </span>
         </div>
         <div className="cycle-week-strip">
@@ -170,22 +207,26 @@ export default function Home({
               { weekday: "short" },
             );
             const balance = dayStats?.balance ?? 0;
-            const balanceLabel = !recorded || !dayStats
-              ? "미기록"
-              : balance === 0
-                ? "0 kcal"
-                : `${balance > 0 ? "+" : "-"}${Math.round(Math.abs(balance)).toLocaleString("ko-KR")}kcal`;
-            const balanceClass = !recorded || !dayStats
-              ? "unrecorded"
-              : balance < 0
-                ? "deficit"
-                : balance > 0
-                  ? "surplus"
-                  : "balanced";
+            const balanceLabel =
+              !recorded || !dayStats
+                ? "미기록"
+                : balance === 0
+                  ? "0 kcal"
+                  : `${balance > 0 ? "+" : "-"}${Math.round(Math.abs(balance)).toLocaleString("ko-KR")}kcal`;
+            const balanceClass =
+              !recorded || !dayStats
+                ? "unrecorded"
+                : balance < 0
+                  ? "deficit"
+                  : balance > 0
+                    ? "surplus"
+                    : "balanced";
             return (
               <div className={`cycle-day ${balanceClass}`} key={date}>
                 <span className="cycle-day-weekday">{weekday}</span>
-                <strong className="cycle-day-date">{Number(date.slice(8))}일</strong>
+                <strong className="cycle-day-date">
+                  {Number(date.slice(8))}일
+                </strong>
                 <span className="cycle-day-balance">{balanceLabel}</span>
               </div>
             );
@@ -200,17 +241,6 @@ export default function Home({
           </strong>
         </div>
       </section>
-      <Card className="total-balance-card">
-        <span className="total-balance-label">기록 시작일부터 전체 누적</span>
-        <strong className="total-balance-value">
-          {totalBalance === 0
-            ? "0 kcal 균형"
-            : `${totalBalance > 0 ? "+" : "-"}${kcal(Math.abs(totalBalance))} ${totalBalance > 0 ? "흑자" : "적자"}`}
-        </strong>
-        <span className="total-balance-period">
-          {startedOnLabel}부터 오늘까지
-        </span>
-      </Card>
     </>
   );
 }

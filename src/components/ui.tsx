@@ -169,6 +169,22 @@ export function Icon({ name }: { name: string }) {
         <path d="M9 21v-8h6v8" />
       </>
     ),
+    activity: <path d="M2 12h4l3-7 5 14 3-7h5" />,
+    records: (
+      <>
+        <rect x="4" y="3" width="16" height="18" rx="2" />
+        <path d="M8 8h8M8 12h8M8 16h5" />
+      </>
+    ),
+    calendar: (
+      <>
+        <rect x="3" y="5" width="18" height="16" rx="2" />
+        <path d="M7 3v4m10-4v4M3 10h18" />
+      </>
+    ),
+    chevronLeft: <path d="m15 18-6-6 6-6" />,
+    chevronRight: <path d="m9 18 6-6-6-6" />,
+    chevronDown: <path d="m6 9 6 6 6-6" />,
     meal: (
       <>
         <path d="M5 3v7m3-7v7m3-7v7M5 7h6M8 10v11M18 3v18M18 3c-4 4-4 8 0 8" />

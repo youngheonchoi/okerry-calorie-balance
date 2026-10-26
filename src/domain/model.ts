@@ -98,10 +98,142 @@ export type Exercise = Stamp & {
 };
 export type Weight = Stamp & { date: DateKey; weight: number };
 export type WorkoutStatus = Stamp & { date: DateKey; workedOut: boolean };
+export const activityLevels = [
+  {
+    value: "steps0to3000",
+    label: "거의 없음",
+    steps: "0~3,000보 미만",
+    estimate: 1500,
+  },
+  {
+    value: "steps3000to6000",
+    label: "적음",
+    steps: "3,000~6,000보 미만",
+    estimate: 4500,
+  },
+  {
+    value: "steps6000to9000",
+    label: "보통",
+    steps: "6,000~9,000보 미만",
+    estimate: 7500,
+  },
+  {
+    value: "steps9000to12000",
+    label: "조금 많음",
+    steps: "9,000~12,000보 미만",
+    estimate: 10500,
+  },
+  {
+    value: "steps12000to15000",
+    label: "많음",
+    steps: "12,000~15,000보 미만",
+    estimate: 13500,
+  },
+  {
+    value: "steps15000plus",
+    label: "매우 많음",
+    steps: "15,000보 이상",
+    estimate: 16500,
+  },
+] as const;
+export const previousActivityLevels = [
+  {
+    value: "steps0to2000",
+    label: "거의 없음",
+    steps: "0~2,000보 미만",
+    estimate: 1000,
+  },
+  {
+    value: "steps2000to4000",
+    label: "적음",
+    steps: "2,000~4,000보 미만",
+    estimate: 3000,
+  },
+  {
+    value: "steps4000to6000",
+    label: "적음",
+    steps: "4,000~6,000보 미만",
+    estimate: 5000,
+  },
+  {
+    value: "steps6000to8000",
+    label: "보통",
+    steps: "6,000~8,000보 미만",
+    estimate: 7000,
+  },
+  {
+    value: "steps8000to10000",
+    label: "보통",
+    steps: "8,000~10,000보 미만",
+    estimate: 9000,
+  },
+  {
+    value: "steps10000to12000",
+    label: "많음",
+    steps: "10,000~12,000보 미만",
+    estimate: 11000,
+  },
+  {
+    value: "steps12000to14000",
+    label: "많음",
+    steps: "12,000~14,000보 미만",
+    estimate: 13000,
+  },
+  {
+    value: "steps14000to16000",
+    label: "매우 많음",
+    steps: "14,000~16,000보 미만",
+    estimate: 15000,
+  },
+  {
+    value: "steps16000plus",
+    label: "매우 많음",
+    steps: "16,000보 이상",
+    estimate: 17000,
+  },
+] as const;
+export type ActivityLevel = (typeof activityLevels)[number]["value"];
+export type DailyActivity = Stamp & {
+  date: DateKey;
+  steps: number | null;
+  movement:
+    | ActivityLevel
+    | (typeof previousActivityLevels)[number]["value"]
+    | "veryLow"
+    | "low"
+    | "moderate"
+    | "high"
+    | "veryHigh"
+    | "none"
+    | "oneToTwo"
+    | "threePlus";
+};
+export function activityLabel(movement: DailyActivity["movement"]): string {
+  const level = [...activityLevels, ...previousActivityLevels].find(
+    (item) => item.value === movement,
+  );
+  if (level) return level.steps;
+  return {
+    veryLow: "거의 없음",
+    low: "적음",
+    moderate: "보통",
+    high: "많음",
+    veryHigh: "매우 많음",
+    none: "거의 없음",
+    oneToTwo: "1~2시간",
+    threePlus: "3시간 이상",
+  }[
+    movement as Exclude<
+      DailyActivity["movement"],
+      ActivityLevel | (typeof previousActivityLevels)[number]["value"]
+    >
+  ];
+}
 export type Meta = Stamp & {
   startedOn: DateKey;
   completedDays: DateKey[];
   workoutStatus: WorkoutStatus[];
+  activityRecords: DailyActivity[];
   hiddenFoodKeywords: string[];
   initialized: boolean;
 };
@@ -154,6 +286,7 @@ export function emptyWallet(date: string): Wallet {
       startedOn: date,
       completedDays: [],
       workoutStatus: [],
+      activityRecords: [],
       hiddenFoodKeywords: [],
       initialized: false,
     },

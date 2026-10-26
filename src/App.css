@@ -140,21 +140,13 @@
 .meter.over-budget > span {
   background: #f2a65a;
 }
-.balance-context {
-  margin-top: 8px;
-}
-.balance-divider {
-  border: 0;
-  border-top: 1px solid var(--line);
-  margin: 8px 0;
-}
 .balance-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   width: 100%;
-  min-height: 36px;
+  min-height: 44px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -164,9 +156,14 @@
 }
 .balance-chevron {
   display: inline-block;
-  font-size: 16px;
-  line-height: 1;
+  width: 16px;
+  height: 16px;
   transition: transform 160ms ease;
+}
+.balance-chevron svg {
+  display: block;
+  width: 16px;
+  height: 16px;
 }
 .balance-chevron.expanded {
   transform: rotate(180deg);
@@ -196,15 +193,281 @@
   gap: 12px;
   font-size: 15px;
 }
-.balance-card > p {
-  font-size: 13px;
-  color: var(--muted);
-  margin-bottom: 0;
-}
-.balance-card > .over-budget-message {
-  margin-top: 12px;
-  color: #9b5b2a;
+.over-budget-message {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fff4e8;
+  color: var(--warning);
+  font-size: 15px;
   line-height: 1.5;
+}
+.home-record-guide {
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.home-record-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.home-action-content {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.home-action-stage {
+  font-size: 12px !important;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.home-action-complete {
+  margin-left: 4px;
+  font-size: 12px !important;
+}
+.home-action-complete::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 8px;
+  margin-right: 3px;
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.home-action-label {
+  font-size: 14px !important;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.home-record-actions button.wallet-action {
+  min-width: 0;
+  width: 100%;
+  min-height: 44px;
+  padding-inline: 4px !important;
+}
+.record-kind-switch {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 4px;
+  border-radius: 16px;
+  background: var(--brand-soft);
+}
+.record-kind-switch::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 16px) / 2);
+  border-radius: 12px;
+  background: var(--surface);
+  transition: transform 220ms ease;
+}
+.record-kind-switch[data-kind="exercise"]::before {
+  transform: translateX(calc(100% + 8px));
+}
+.record-kind-switch button {
+  position: relative;
+  min-height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 600;
+}
+.record-kind-switch button[aria-pressed="true"] {
+  color: var(--brand-strong);
+}
+.record-swipe-area {
+  touch-action: pan-y;
+  overflow-x: clip;
+}
+.record-swipe-panel.meal {
+  animation: record-panel-from-left 220ms ease-out both;
+}
+.record-swipe-panel.exercise {
+  animation: record-panel-from-right 220ms ease-out both;
+}
+@keyframes record-panel-from-left {
+  from {
+    opacity: 0.7;
+    transform: translateX(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes record-panel-from-right {
+  from {
+    opacity: 0.7;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .record-kind-switch::before {
+    transition: none;
+  }
+  .record-swipe-panel.meal,
+  .record-swipe-panel.exercise {
+    animation: none;
+  }
+}
+.activity-help {
+  margin-bottom: 16px;
+  color: var(--muted);
+  font-size: 15px;
+}
+.activity-levels {
+  display: grid;
+  gap: 8px;
+}
+.activity-level {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+}
+.activity-level[aria-pressed="true"] {
+  border-color: var(--brand-strong);
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+}
+.activity-level-name {
+  flex: none;
+  font-size: 16px;
+  font-weight: 600;
+}
+.activity-level-selected {
+  margin-left: auto;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.activity-saved {
+  margin-top: 12px;
+  color: var(--brand-strong);
+  font-size: 15px;
+}
+.calendar-month-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 16px 0;
+}
+.calendar-month-heading h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.calendar-month-heading button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+}
+.calendar-month-heading button:disabled {
+  opacity: 0.4;
+}
+.calendar-weekdays,
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(44px, 1fr));
+}
+.calendar-weekdays span {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+.calendar-day {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+}
+.calendar-day.selected {
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+  font-weight: 700;
+}
+.calendar-day:disabled {
+  color: var(--muted);
+  opacity: 0.45;
+}
+.calendar-marker {
+  display: block;
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+.calendar-markers {
+  position: absolute;
+  bottom: 4px;
+  display: flex;
+  gap: 3px;
+}
+.calendar-marker.activity {
+  background: #0f9d58;
+}
+.calendar-marker.meal {
+  background: #dc7b21;
+}
+.calendar-marker.exercise {
+  background: #6b5fd4;
+}
+.calendar-legend {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.calendar-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.calendar-selected-heading {
+  margin: 20px 0 0;
+}
+.calendar-page > .card {
+  margin: 12px 0;
+}
+@media (max-width: 347px) {
+  .calendar-grid-wrap {
+    width: calc(100% + 28px);
+    margin-inline: -14px;
+  }
 }
 .two {
   display: grid;
@@ -253,7 +516,7 @@
 }
 .cycle-day-weekday {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.2;
 }
 .cycle-day-date {
@@ -262,7 +525,7 @@
 }
 .cycle-day-balance {
   max-width: 100%;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1.2;
   white-space: nowrap;
@@ -306,25 +569,6 @@
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
-}
-.total-balance-card {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 14px;
-  padding: 18px 20px;
-  border-color: var(--line);
-  box-shadow: none;
-}
-.total-balance-label,
-.total-balance-period {
-  color: var(--muted);
-  font-size: 13px;
-}
-.total-balance-value {
-  color: var(--text);
-  font-size: 20px;
-  line-height: 1.4;
 }
 .stack {
   display: flex;
@@ -475,9 +719,26 @@ button.wallet-secondary span {
   padding: 8px;
   z-index: 10;
 }
-.floating-tabs > button {
+.floating-tabs-track {
+  position: relative;
+  display: flex;
+  width: 100%;
+}
+.floating-tabs-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 24px;
+  background: var(--brand-soft);
+  pointer-events: none;
+  transition: transform 240ms ease;
+}
+.floating-tabs-track > button {
+  position: relative;
   display: flex;
   flex: 1;
+  min-width: 0;
   flex-direction: column;
   gap: 3px;
   align-items: center;
@@ -490,9 +751,29 @@ button.wallet-secondary span {
   font-size: 13px;
   font-weight: 600;
 }
-.floating-tabs > button.active {
-  background: var(--brand-soft);
+.floating-tabs-track > button.active {
   color: var(--brand-strong);
+}
+@media (prefers-reduced-motion: reduce) {
+  .floating-tabs-indicator {
+    transition: none;
+  }
+}
+.tab-icon {
+  position: relative;
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+}
+.tab-alert {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--danger);
+  border: 1px solid var(--surface);
 }
 .meal-row {
   display: flex;
@@ -754,24 +1035,6 @@ button.wallet-secondary span {
   border-top: 1px solid var(--line);
   background: var(--surface);
   box-shadow: 0 -4px 14px rgba(20, 50, 30, 0.04);
-}
-.choices {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 20px 0;
-}
-.choice {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  padding: 12px 16px;
-  border-radius: 14px;
-  min-height: 48px;
-}
-.choice.selected {
-  background: var(--brand-action);
-  color: var(--on-action);
-  border-color: var(--brand);
 }
 dialog {
   width: calc(100% - 32px);

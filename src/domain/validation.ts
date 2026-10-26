@@ -221,6 +221,41 @@ const walletSchema = z.object({
         z.object({ ...stampSchema, date: dateSchema, workedOut: z.boolean() }),
       )
       .default([]),
+    activityRecords: z
+      .array(
+        z.object({
+          ...stampSchema,
+          date: dateSchema,
+          steps: num(0, 100000).int().nullable(),
+          movement: z.enum([
+            "none",
+            "oneToTwo",
+            "threePlus",
+            "veryLow",
+            "low",
+            "moderate",
+            "high",
+            "veryHigh",
+            "steps0to2000",
+            "steps2000to4000",
+            "steps4000to6000",
+            "steps6000to8000",
+            "steps8000to10000",
+            "steps10000to12000",
+            "steps12000to14000",
+            "steps14000to16000",
+            "steps16000plus",
+            "steps0to3000",
+            "steps3000to6000",
+            "steps6000to9000",
+            "steps9000to12000",
+            "steps12000to15000",
+            "steps15000plus",
+          ]),
+        }),
+      )
+      .max(100000)
+      .default([]),
     hiddenFoodKeywords: z.array(z.string().trim().min(1).max(100)).default([]),
     initialized: z.boolean(),
   }),
@@ -283,6 +318,7 @@ export function validateWallet(input: unknown): Wallet {
       (x) => x.date > localDate(),
     ) ||
     w.meta.workoutStatus.some((x) => x.date > localDate()) ||
+    w.meta.activityRecords.some((x) => x.date > localDate()) ||
     w.meta.completedDays.some((d) => d > localDate())
   )
     throw new Error("미래 날짜의 기록은 가져올 수 없어요");
@@ -293,6 +329,11 @@ export function validateWallet(input: unknown): Wallet {
     w.meta.workoutStatus.length
   )
     throw new Error("운동 여부 기록 날짜가 중복돼요");
+  if (
+    new Set(w.meta.activityRecords.map((item) => item.date)).size !==
+    w.meta.activityRecords.length
+  )
+    throw new Error("활동 기록 날짜가 중복돼요");
   for (const t of w.tdee_history) {
     const computed = estimateDailyTDEE(t.profile, t.correction);
     for (const field of [

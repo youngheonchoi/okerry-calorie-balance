@@ -1,3 +1,9 @@
+import {
+  activityLevels,
+  previousActivityLevels,
+  type DailyActivity,
+  type Lifestyle,
+} from "./model";
 import type {
   Body,
   Cycle,
@@ -59,13 +65,7 @@ export function calculateExerciseCalories(
     Math.max(0, (((mets[kind][intensity] - 1) * 3.5 * weight) / 200) * minutes)
   );
 }
-export function estimateDailyTDEE(
-  profile: Profile,
-  correction = 0,
-): Omit<Tdee, "id" | "createdAt" | "updatedAt" | "effectiveFrom"> {
-  const bmr = calculateBMR(profile),
-    l = profile.lifestyle;
-  const detailedNeat = l.stepBand !== undefined;
+function estimateBaselineWalkingMinutes(l: Lifestyle): number {
   const stepEstimates = {
     exact: l.steps,
     under3000: 1500,
@@ -100,14 +100,24 @@ export function estimateDailyTDEE(
     unknown: 30,
   } as const;
   // Weekday step counts include walking commute, so use the larger estimate instead of adding twice.
-  const walkingMinutes = detailedNeat
+  return l.stepBand !== undefined
     ? (weekdayWalkMinutes * 5 +
         (l.weekendActivity
           ? weekendWalkMinutes[l.weekendActivity]
           : l.walking * 60) *
           2) /
-      7
+        7
     : Math.max(l.steps / 100, l.walking * 60, l.walkMinutes);
+}
+export function estimateDailyTDEE(
+  profile: Profile,
+  correction = 0,
+): Omit<Tdee, "id" | "createdAt" | "updatedAt" | "effectiveFrom"> {
+  const bmr = calculateBMR(profile),
+    l = profile.lifestyle;
+  const detailedNeat = l.stepBand !== undefined;
+  const directionalCommute = l.commuteOutMode !== undefined;
+  const walkingMinutes = estimateBaselineWalkingMinutes(l);
   const sittingHours = l.sittingBand
     ? {
         under5: 4,
@@ -181,11 +191,49 @@ export function calculateDailyIntake(meals: Meal[], date: string): number {
     .filter((m) => m.date === date)
     .reduce((n, m) => n + m.calories, 0);
 }
+export function calculateDailyActivityAdjustment(
+  tdee: Tdee,
+  activity?: DailyActivity,
+): number {
+  const level = [...activityLevels, ...previousActivityLevels].find(
+    (item) => item.value === activity?.movement,
+  );
+  const previousStepEstimates = {
+    veryLow: 1500,
+    low: 4500,
+    moderate: 8000,
+    high: 12500,
+    veryHigh: 17500,
+  } as const;
+  const estimatedSteps = level
+    ? level.estimate
+    : activity?.movement && activity.movement in previousStepEstimates
+      ? previousStepEstimates[
+          activity.movement as keyof typeof previousStepEstimates
+        ]
+      : null;
+  if (estimatedSteps === null) return 0; // Older time-based records were never applied to TDEE.
+  const weight = tdee.profile.weight;
+  const selectedWalking = calculateExerciseCalories(
+    "walking",
+    "light",
+    estimatedSteps / 100,
+    weight,
+  );
+  const baselineWalking = calculateExerciseCalories(
+    "walking",
+    "light",
+    estimateBaselineWalkingMinutes(tdee.profile.lifestyle),
+    weight,
+  );
+  return selectedWalking - baselineWalking;
+}
 export function calculateDailyExpenditure(
   tdee: Tdee,
   exercises: Exercise[],
   date: string,
   workedOut?: boolean,
+  activity?: DailyActivity,
 ): number {
   const loggedThatDay = exercises.filter((e) => e.date === date);
   const legacyRegular =
@@ -199,6 +247,7 @@ export function calculateDailyExpenditure(
     .reduce((n, e) => n + e.calories, 0);
   return (
     (workedOut === true ? tdee.exerciseDay : tdee.rest) +
+    calculateDailyActivityAdjustment(tdee, activity) +
     legacyRegular +
     additional
   );
@@ -217,6 +266,7 @@ export function daily(wallet: Wallet, date: string) {
       wallet.exercises,
       date,
       wallet.meta.workoutStatus.find((item) => item.date === date)?.workedOut,
+      wallet.meta.activityRecords.find((item) => item.date === date),
     ),
     target = expenditure + goal.balance;
   return {

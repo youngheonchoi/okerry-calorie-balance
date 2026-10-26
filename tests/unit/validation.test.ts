@@ -22,11 +22,26 @@ describe("validation", () => {
   it("migrates legacy regular workout entries into daily workout status", () => {
     const w = fixture();
     delete (w.meta as Partial<typeof w.meta>).workoutStatus;
+    delete (w.meta as Partial<typeof w.meta>).activityRecords;
     w.exercises = [exercise()];
     const migrated = validateWallet(w);
     expect(migrated.meta.workoutStatus).toMatchObject([
       { date: "2026-10-01", workedOut: true },
     ]);
+    expect(migrated.meta.activityRecords).toEqual([]);
+  });
+  it("rejects duplicate daily activity dates", () => {
+    const w = fixture();
+    const activity = {
+      id: "activity-1",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      date: "2026-10-01",
+      steps: 4000,
+      movement: "oneToTwo" as const,
+    };
+    w.meta.activityRecords = [activity, { ...activity, id: "activity-2" }];
+    expect(() => validateWallet(w)).toThrow("활동 기록 날짜");
   });
   it("rejects duplicate IDs and duplicate effective dates", () => {
     const w = fixture();

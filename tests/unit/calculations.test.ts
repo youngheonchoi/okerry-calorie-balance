@@ -3,6 +3,7 @@ import {
   addDays,
   calculateBMR,
   calculateCycleBalance,
+  calculateDailyActivityAdjustment,
   calculateDailyExpenditure,
   calculateExerciseCalories,
   calculateRemainingCalories,
@@ -141,6 +142,66 @@ describe("energy accounting", () => {
       { ...stamp(), date: "2026-10-01", workedOut: true },
     ];
     expect(daily(w, "2026-10-01")?.expenditure).toBe(t.exerciseDay);
+  });
+  it("adjusts daily TDEE for selected activity and adds logged exercise separately", () => {
+    const w = fixture();
+    const t = w.tdee_history[0];
+    const activity = {
+      ...stamp(),
+      date: "2026-10-01",
+      steps: null,
+      movement: "steps6000to9000" as const,
+    };
+    w.meta.activityRecords = [activity];
+    const adjustment = calculateDailyActivityAdjustment(t, activity);
+    expect(adjustment).toBeGreaterThan(0);
+    expect(
+      calculateDailyActivityAdjustment(t, {
+        ...activity,
+        movement: "steps9000to12000",
+      }) - adjustment,
+    ).toBeCloseTo(
+      calculateExerciseCalories("walking", "light", 30, t.profile.weight),
+    );
+    expect(daily(w, activity.date)?.expenditure).toBeCloseTo(
+      t.rest + adjustment,
+    );
+    w.exercises = [exercise({ source: "extra" })];
+    expect(daily(w, activity.date)?.expenditure).toBeCloseTo(
+      t.rest + adjustment + w.exercises[0].calories,
+    );
+    expect(daily(w, activity.date)?.remaining).toBeCloseTo(
+      t.rest + adjustment + w.exercises[0].calories - 300,
+    );
+    w.meta.activityRecords = [{ ...activity, movement: "steps0to3000" }];
+    expect(
+      calculateDailyActivityAdjustment(t, w.meta.activityRecords[0]),
+    ).toBeLessThan(0);
+    expect(calculateDailyActivityAdjustment(t)).toBe(0);
+    expect(
+      calculateDailyActivityAdjustment(t, {
+        ...activity,
+        movement: "steps8000to10000",
+      }),
+    ).toBeCloseTo(
+      calculateExerciseCalories("walking", "light", 90, t.profile.weight) -
+        calculateExerciseCalories("walking", "light", 60, t.profile.weight),
+    );
+    expect(
+      calculateDailyActivityAdjustment(t, {
+        ...activity,
+        movement: "moderate",
+      }),
+    ).toBeCloseTo(
+      calculateExerciseCalories("walking", "light", 80, t.profile.weight) -
+        calculateExerciseCalories("walking", "light", 60, t.profile.weight),
+    );
+    expect(
+      calculateDailyActivityAdjustment(t, {
+        ...activity,
+        movement: "oneToTwo",
+      }),
+    ).toBe(0);
   });
   it("separates remaining budget and energy deficit", () => {
     const w = fixture();
