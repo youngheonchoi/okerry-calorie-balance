@@ -364,6 +364,18 @@ button.wallet-secondary span {
 .field > span {
   font-weight: 600;
 }
+.app-shell > .field {
+  min-width: 0;
+  max-width: 100%;
+}
+.app-shell > .field > input[type="date"] {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+}
 .field-label {
   margin: 20px 0 4px;
   font-size: 16px;

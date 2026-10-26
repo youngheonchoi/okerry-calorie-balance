@@ -167,6 +167,12 @@ export default function App() {
           ) : onboarding ? (
             <Onboarding
               initial={initial}
+              initialGoal={
+                wallet ? effective(wallet.goal_history, today) : undefined
+              }
+              initialCycle={
+                wallet ? effective(wallet.cycle_history, today) : undefined
+              }
               initialCorrection={
                 wallet
                   ? effective(wallet.tdee_history, addDays(today, 1))

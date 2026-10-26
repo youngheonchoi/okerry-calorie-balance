@@ -1,9 +1,49 @@
 import { expect, test, type Page } from "@playwright/test";
+import { fixture } from "../fixtures";
+
+test("restores an old onboarding draft into the shortened flow", async ({
+  page,
+}) => {
+  const wallet = fixture();
+  const draft = {
+    schemaVersion: 3,
+    step: 6,
+    profile: {
+      ...wallet.profile!,
+      habits: [{ ...wallet.profile!.habits[0], minutes: null }],
+    },
+    goal: wallet.goal_history[0],
+    cycle: { ...wallet.cycle_history[0], weekday: 4 },
+    correction: 0,
+  };
+  await page.addInitScript((value) => {
+    localStorage.setItem(
+      "__ait_storage:calorie_wallet_draft",
+      JSON.stringify(value),
+    );
+  }, draft);
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "아무 곳이나 터치해 시작하기", exact: true })
+    .click();
+  await expect(page.locator(".onboarding-header .eyebrow")).toHaveText("3/4");
+  await expect(page.getByLabel("시작 요일", { exact: true })).toHaveValue("4");
+  await page.getByRole("button", { name: "다음", exact: true }).click();
+  await expect(
+    page.getByText("예상 기초대사량", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("체중 감량", { exact: true })).toBeVisible();
+  await expect(page.getByText("목요일", { exact: true })).toBeVisible();
+  await page
+    .getByRole("button", { name: "설정 완료하기", exact: true })
+    .click();
+  await expect(page.locator(".balance-card")).toBeVisible();
+});
 
 async function onboard(page: Page) {
   await page.goto("/");
   await page
-    .getByRole("button", { name: "아무데나 터치해 시작하기", exact: true })
+    .getByRole("button", { name: "아무 곳이나 터치해 시작하기", exact: true })
     .click();
   await page
     .getByRole("button", { name: "계산 시작하기", exact: true })
@@ -12,6 +52,7 @@ async function onboard(page: Page) {
   await page.getByLabel("키 (cm)", { exact: true }).fill("175");
   await page.getByLabel("현재 체중 (kg)", { exact: true }).fill("70");
   await page.getByRole("button", { name: "다음", exact: true }).click();
+  await page.setViewportSize({ width: 390, height: 400 });
   const fixedControls = await page.locator(".onboarding").evaluate((root) => {
     const header = root.querySelector(".onboarding-header")!;
     const content = root.querySelector<HTMLElement>(".onboarding-content")!;
@@ -32,55 +73,87 @@ async function onboard(page: Page) {
   expect(fixedControls.scrollTop).toBeGreaterThan(0);
   expect(fixedControls.headerTopAfter).toBe(fixedControls.headerTop);
   expect(fixedControls.footerTopAfter).toBe(fixedControls.footerTop);
-  await page
-    .getByLabel("운동하지 않는 평일의 하루 평균 걸음 수는 얼마인가요?", {
-      exact: true,
-    })
-    .selectOption("5000to8000");
-  await page
-    .getByLabel("근무일에 실제로 앉아 있는 시간은 어느 정도인가요?", {
-      exact: true,
-    })
-    .selectOption("7to8");
-  await page.getByLabel("출퇴근 일수 (일/주)", { exact: true }).fill("5");
-  await page.getByLabel("출근 방식", { exact: true }).selectOption("bike");
-  await page.getByLabel("출근 자전거 시간 (분)", { exact: true }).fill("10");
-  await page.getByLabel("퇴근 방식", { exact: true }).selectOption("walk");
-  await page.getByLabel("퇴근 도보 거리 (km)", { exact: true }).fill("3");
-  await page
-    .getByLabel("주말에 운동을 제외한 활동량은 어떤 편인가요?", { exact: true })
-    .selectOption("light");
-  await page.getByRole("button", { name: "다음", exact: true }).click();
-  await page.getByRole("button", { name: "러닝", exact: true }).click();
-  await page.getByRole("button", { name: "다음", exact: true }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator(".onboarding-header .eyebrow")).toHaveText("2/4");
   await expect(
-    page.getByRole("heading", { name: "나의 하루 소비 칼로리", exact: true }),
-  ).toBeVisible();
-  await expect(page.locator(".onboarding-header .eyebrow")).toHaveText("4/6");
+    page.getByText("비운동일 목표 섭취량", { exact: true }),
+  ).toHaveCount(0);
   await page
-    .getByRole("button", { name: "이 결과로 시작하기", exact: true })
-    .click();
+    .getByLabel("어떤 목표로 칼로리를 관리하시나요?", { exact: true })
+    .selectOption("lose");
+  await page.getByRole("button", { name: "다음", exact: true }).click();
+  await expect(page.locator(".onboarding-header .eyebrow")).toHaveText("3/4");
+  await page.getByLabel("시작 요일", { exact: true }).selectOption("3");
+  await page.getByRole("button", { name: "다음", exact: true }).click();
+  await expect(page.locator(".onboarding-header .eyebrow")).toHaveText("4/4");
+  await expect(
+    page.getByText("예상 기초대사량", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("체중 감량", { exact: true })).toBeVisible();
+  await expect(page.getByText("수요일", { exact: true })).toBeVisible();
+  await page.screenshot({ path: "test-results/onboarding-summary.png" });
+  await page.setViewportSize({ width: 320, height: 740 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(
+    page.getByText("운동하지 않는 날 예상 소비량", { exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "이전 단계", exact: true }).click();
+  await expect(page.getByLabel("시작 요일", { exact: true })).toHaveValue("3");
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page
     .getByRole("button", { name: "설정 완료하기", exact: true })
     .click();
-  await expect(
-    page.getByRole("heading", { name: "오늘의 칼로리 잔고", exact: true }),
-  ).toBeVisible();
+  await expect(page.locator(".balance-card")).toBeVisible();
 }
+test("short onboarding saves its summary and resumes the completed wallet", async ({
+  page,
+}) => {
+  await onboard(page);
+  await page.reload();
+  await expect(page.locator(".balance-card")).toBeVisible();
+  const saved = await page.evaluate(() => ({
+    profile: JSON.parse(
+      localStorage.getItem("__ait_storage:calorie_wallet_profile")!,
+    ).data,
+    goals: JSON.parse(
+      localStorage.getItem("__ait_storage:calorie_wallet_goal_history")!,
+    ).data,
+    cycles: JSON.parse(
+      localStorage.getItem("__ait_storage:calorie_wallet_cycle_history")!,
+    ).data,
+  }));
+  expect(saved.profile.age).toBe(30);
+  expect(saved.profile.habits).toEqual([]);
+  expect(saved.goals[0].kind).toBe("lose");
+  expect(saved.cycles[0].weekday).toBe(3);
+});
+
 test("daily workout choice changes the home TDEE and can be toggled back", async ({
   page,
 }) => {
   await onboard(page);
-  await expect(page.getByText("오늘 비운동일 TDEE", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("오늘 비운동일 TDEE", { exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "운동", exact: true }).click();
   await page.getByRole("button", { name: "운동했어요", exact: true }).click();
   await page.getByRole("button", { name: "홈", exact: true }).click();
-  await expect(page.getByText("오늘 운동일 TDEE", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("오늘 운동일 TDEE", { exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "운동", exact: true }).click();
-  await page.getByRole("button", { name: "운동 안 했어요", exact: true }).click();
+  await page
+    .getByRole("button", { name: "운동 안 했어요", exact: true })
+    .click();
   await page.getByRole("button", { name: "홈", exact: true }).click();
-  await expect(page.getByText("오늘 비운동일 TDEE", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("오늘 비운동일 TDEE", { exact: true }),
+  ).toBeVisible();
 });
 
 test("first setup, CRUD, persistence, settings and reset", async ({ page }) => {
@@ -134,9 +207,7 @@ test("first setup, CRUD, persistence, settings and reset", async ({ page }) => {
     page.getByText("기록을 저장하면 잔고에 바로 반영돼요.", { exact: true }),
   ).toBeVisible();
   await page.reload();
-  await expect(
-    page.getByRole("heading", { name: "오늘의 칼로리 잔고", exact: true }),
-  ).toBeVisible();
+  await expect(page.locator(".balance-card")).toBeVisible();
   await expect(
     page.getByText("기록을 저장하면 잔고에 바로 반영돼요.", { exact: true }),
   ).toBeVisible();
@@ -169,7 +240,7 @@ test("first setup, CRUD, persistence, settings and reset", async ({ page }) => {
     .click();
   await expect(
     page.getByRole("button", {
-      name: "아무데나 터치해 시작하기",
+      name: "아무 곳이나 터치해 시작하기",
       exact: true,
     }),
   ).toBeVisible();
@@ -189,7 +260,7 @@ test("saves incomplete onboarding fields and keeps a white background under dark
     .toBe("rgb(255, 255, 255)");
   await page.screenshot({ path: "test-results/welcome-dark.png" });
   await page
-    .getByRole("button", { name: "아무데나 터치해 시작하기", exact: true })
+    .getByRole("button", { name: "아무 곳이나 터치해 시작하기", exact: true })
     .click();
   await page
     .getByRole("button", { name: "계산 시작하기", exact: true })
@@ -207,7 +278,7 @@ test("saves incomplete onboarding fields and keeps a white background under dark
     .toBe(32);
   await page.reload();
   await page
-    .getByRole("button", { name: "아무데나 터치해 시작하기", exact: true })
+    .getByRole("button", { name: "아무 곳이나 터치해 시작하기", exact: true })
     .click();
   await expect(page.getByLabel("만 나이 (세)", { exact: true })).toHaveValue(
     "32",
@@ -248,8 +319,9 @@ test("recalculation preserves today's balance", async ({ page }) => {
     "70",
   );
   await page.getByLabel("현재 체중 (kg)", { exact: true }).fill("65");
-  for (let i = 0; i < 4; i++)
-    await page.getByRole("button", { name: "다음", exact: true }).click();
+  await page.getByRole("button", { name: "다음", exact: true }).click();
+  await expect(page.getByText("체중 감량", { exact: true })).toBeVisible();
+  await expect(page.getByText("수요일", { exact: true })).toBeVisible();
   await page
     .getByRole("button", { name: "계산 결과 저장하기", exact: true })
     .click();
@@ -372,7 +444,7 @@ test.describe("mobile viewport gestures", () => {
       .poll(() => page.evaluate(() => window.visualViewport?.scale))
       .toBe(1);
     await page
-      .getByRole("button", { name: "아무데나 터치해 시작하기", exact: true })
+      .getByRole("button", { name: "아무 곳이나 터치해 시작하기", exact: true })
       .click();
     await page
       .getByRole("button", { name: "계산 시작하기", exact: true })

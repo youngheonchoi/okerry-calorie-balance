@@ -9,11 +9,10 @@ import {
 } from "../domain/defaults";
 import { graniteEvent } from "@apps-in-toss/web-framework";
 import {
-  exerciseLabels,
+  goalLabels,
   stamp,
   type Cycle,
   type Goal,
-  type Habit,
   type Profile,
   type Tdee,
 } from "../domain/model";
@@ -22,7 +21,6 @@ import {
   bodySchema,
   cycleSchema,
   goalSchema,
-  neatAnswersSchema,
   profileSchema,
   draftProfileSchema,
 } from "../domain/validation";
@@ -92,7 +90,8 @@ export function GoalFields({
           onChange={(v) =>
             onChange({
               ...goal,
-              balance: v === "" ? NaN : Number(v) * (goal.kind === "lose" ? -1 : 1),
+              balance:
+                v === "" ? NaN : Number(v) * (goal.kind === "lose" ? -1 : 1),
             })
           }
           min={0}
@@ -175,12 +174,16 @@ export function CycleFields({
 export default function Onboarding({
   initial,
   initialCorrection = 0,
+  initialGoal,
+  initialCycle,
   onComplete,
   onCancel,
   busy,
 }: {
   initial?: Profile;
   initialCorrection?: number;
+  initialGoal?: Goal;
+  initialCycle?: Cycle;
   onComplete: (r: Result) => Promise<void>;
   onCancel: () => void;
   busy: boolean;
@@ -188,8 +191,8 @@ export default function Onboarding({
   const [profile, setProfile] = useState<Profile>(initial ?? newProfile),
     [step, setStep] = useState(0),
     [correction, setCorrection] = useState(initialCorrection),
-    [goal, setGoal] = useState(defaultGoal),
-    [cycle, setCycle] = useState(defaultCycle),
+    [goal, setGoal] = useState(initialGoal ?? defaultGoal),
+    [cycle, setCycle] = useState(initialCycle ?? defaultCycle),
     [error, setError] = useState(""),
     [ready, setReady] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -217,20 +220,34 @@ export default function Onboarding({
         try {
           const d = JSON.parse(raw);
           if (
-            [1, 2, 3].includes(d?.schemaVersion) &&
+            [1, 2, 3, 4].includes(d?.schemaVersion) &&
             d.profile &&
             typeof d.step === "number"
           ) {
             const check = draftProfileSchema.safeParse(d.profile);
             if (check.success) {
-              setProfile(check.data);
+              setProfile({
+                ...check.data,
+                lifestyle: newProfile().lifestyle,
+                habits: [],
+              });
               const previousStep =
                 d.schemaVersion === 1 && d.step > 2 ? d.step - 1 : d.step;
               const restoredStep =
                 d.schemaVersion < 3 && previousStep > 4
                   ? previousStep - 1
                   : previousStep;
-              setStep(Math.min(6, Math.max(0, restoredStep)));
+              const migratedStep =
+                d.schemaVersion === 4
+                  ? restoredStep
+                  : restoredStep <= 0
+                    ? 0
+                    : restoredStep <= 3
+                      ? 1
+                      : restoredStep <= 5
+                        ? 2
+                        : 3;
+              setStep(Math.min(4, Math.max(0, migratedStep)));
               setCorrection(Number(d.correction) || 0);
               const restoredGoal = goalSchema.safeParse(d.goal);
               if (restoredGoal.success)
@@ -263,7 +280,7 @@ export default function Onboarding({
       void draftStore
         .set(
           JSON.stringify({
-            schemaVersion: 3,
+            schemaVersion: 4,
             profile,
             step,
             correction,
@@ -294,42 +311,34 @@ export default function Onboarding({
   );
   const update = (key: keyof Profile, value: unknown) =>
     setProfile((p) => ({ ...p, [key]: value }));
-  const life = (key: keyof Profile["lifestyle"], value: unknown) =>
-    setProfile((p) => ({ ...p, lifestyle: { ...p.lifestyle, [key]: value } }));
   const valid = profileSchema.safeParse(profile).success;
   const result = valid ? estimateDailyTDEE(profile, correction) : null;
-  const titles = [
-    "내 몸의 하루 소비 칼로리를 알아볼까요?",
-    "기본 신체 정보를 알려주세요",
-    "운동하지 않는 날은 얼마나 움직이나요?",
-    "일주일 동안 어떤 운동을 하시나요?",
-    "나의 하루 소비 칼로리",
-    "나에게 맞는 목표를 정해요",
-    "한 주의 시작 요일을 정해요",
-  ];
+  const summaryStep = initial ? 2 : 4;
+  const titles = initial
+    ? [
+        "내 몸의 하루 소비 칼로리를 알아볼까요?",
+        "기본 신체 정보를 알려주세요",
+        "설정한 정보를 확인해주세요",
+      ]
+    : [
+        "내 몸의 하루 소비 칼로리를 알아볼까요?",
+        "기본 신체 정보를 알려주세요",
+        "나에게 맞는 목표를 정해요",
+        "한 주의 시작 요일을 정해요",
+        "설정한 정보를 확인해주세요",
+      ];
   async function next() {
     setError("");
     try {
       if (step === 1) bodySchema.parse(profile);
-      if (step === 2) neatAnswersSchema.parse(profile.lifestyle);
-      if (step >= 3) profileSchema.parse(profile);
-      if (
-        step === 4 &&
-        (!result ||
-          !Number.isFinite(correction) ||
-          Math.abs(correction) > 2000 ||
-          result.rest < 500)
-      )
-        throw new Error(
-          "보정 후 소비량은 500kcal 이상, 보정값은 ±2,000kcal 이내로 입력해주세요",
-        );
-      if (step === 5) {
-        goalSchema.parse(goal);
-        if (result && result.rest + goal.balance <= 0)
-          throw new Error("목표 섭취량은 0kcal보다 커야 해요");
-      }
-      if (step === 6 || (initial && step === 4)) {
-        if (!initial) cycleSchema.parse(cycle);
+      if (!initial && step === 2) goalSchema.parse(goal);
+      if (!initial && step === 3) cycleSchema.parse(cycle);
+      if (step === summaryStep) {
+        profileSchema.parse(profile);
+        if (!initial) {
+          goalSchema.parse(goal);
+          cycleSchema.parse(cycle);
+        }
         const p = { ...profile, updatedAt: new Date().toISOString() };
         await onComplete({
           profile: p,
@@ -346,7 +355,7 @@ export default function Onboarding({
       if (!initial)
         await draftStore.set(
           JSON.stringify({
-            schemaVersion: 3,
+            schemaVersion: 4,
             profile,
             step: step + 1,
             correction,
@@ -378,20 +387,14 @@ export default function Onboarding({
       }
     }
   }
-  function habit(kind: Habit["kind"], patch: Partial<Habit>) {
-    setProfile((p) => ({
-      ...p,
-      habits: p.habits.map((h) => (h.kind === kind ? { ...h, ...patch } : h)),
-    }));
-  }
   if (!ready) return <p role="status">임시 입력을 불러오고 있어요…</p>;
   return (
     <div className="onboarding">
       <header className="onboarding-header">
         <div className="eyebrow">
-          {step > 0 ? `${step}/${initial ? 4 : 6}` : ""}
+          {step > 0 ? `${step}/${summaryStep}` : ""}
         </div>
-        <progress max={initial ? 4 : 6} value={step} aria-label="설정 진행률" />
+        <progress max={summaryStep} value={step} aria-label="설정 진행률" />
       </header>
       <div className="onboarding-content" ref={contentRef}>
         <h1>{titles[step]}</h1>
@@ -486,319 +489,63 @@ export default function Onboarding({
             )}
           </>
         )}
-        {step === 2 && (
-          <>
-            <p className="hint">
-              운동하지 않는 평일 기준으로 답해주세요. 걸음 수에 출퇴근 도보가
-              포함돼도 중복 계산하지 않아요.
-            </p>
-            <Select
-              label="운동하지 않는 평일의 하루 평균 걸음 수는 얼마인가요?"
-              name="stepBand"
-              placeholder="선택해주세요"
-              value={
-                ["under3000", "3000to5000", "5000to8000", "8000plus"].includes(
-                  profile.lifestyle.stepBand ?? "",
-                )
-                  ? profile.lifestyle.stepBand!
-                  : ""
-              }
-              onChange={(v) => life("stepBand", v)}
-              options={{
-                under3000: "3,000보 미만",
-                "3000to5000": "3,000~5,000보",
-                "5000to8000": "5,000~8,000보",
-                "8000plus": "8,000보 이상",
-              }}
-            />
-            <Select
-              label="근무일에 실제로 앉아 있는 시간은 어느 정도인가요?"
-              name="sittingBand"
-              placeholder="선택해주세요"
-              value={
-                ["under5", "5to6", "7to8", "9to10", "10plus"].includes(
-                  profile.lifestyle.sittingBand ?? "",
-                )
-                  ? profile.lifestyle.sittingBand!
-                  : ""
-              }
-              onChange={(v) => life("sittingBand", v)}
-              options={{
-                under5: "5시간 미만",
-                "5to6": "5~6시간",
-                "7to8": "7~8시간",
-                "9to10": "9~10시간",
-                "10plus": "10시간 이상",
-              }}
-            />
-            <Field
-              label="출퇴근 일수 (일/주)"
-              name="commuteDays"
-              type="number"
-              min={0}
-              max={7}
-              step={1}
-              value={profile.lifestyle.commuteDays ?? ""}
-              onChange={(v) =>
-                life("commuteDays", v === "" ? undefined : Number(v))
-              }
-            />
-            <Select
-              label="출근 방식"
-              name="commuteOutMode"
-              placeholder="선택해주세요"
-              value={profile.lifestyle.commuteOutMode ?? ""}
-              onChange={(v) => life("commuteOutMode", v)}
-              options={{ walk: "도보", bike: "자전거", other: "그 외" }}
-            />
-            {profile.lifestyle.commuteOutMode === "walk" && (
-              <Field
-                label="출근 도보 거리 (km)"
-                name="commuteOutWalkKm"
-                type="number"
-                min={0}
-                max={100}
-                step="0.1"
-                value={profile.lifestyle.commuteOutWalkKm ?? ""}
-                onChange={(v) =>
-                  life("commuteOutWalkKm", v === "" ? undefined : Number(v))
-                }
-              />
-            )}
-            {profile.lifestyle.commuteOutMode === "bike" && (
-              <Field
-                label="출근 자전거 시간 (분)"
-                name="commuteOutBikeMinutes"
-                type="number"
-                min={0}
-                max={300}
-                value={profile.lifestyle.commuteOutBikeMinutes ?? ""}
-                onChange={(v) =>
-                  life(
-                    "commuteOutBikeMinutes",
-                    v === "" ? undefined : Number(v),
-                  )
-                }
-              />
-            )}
-            <Select
-              label="퇴근 방식"
-              name="commuteReturnMode"
-              placeholder="선택해주세요"
-              value={profile.lifestyle.commuteReturnMode ?? ""}
-              onChange={(v) => life("commuteReturnMode", v)}
-              options={{ walk: "도보", bike: "자전거", other: "그 외" }}
-            />
-            {profile.lifestyle.commuteReturnMode === "walk" && (
-              <Field
-                label="퇴근 도보 거리 (km)"
-                name="commuteReturnWalkKm"
-                type="number"
-                min={0}
-                max={100}
-                step="0.1"
-                value={profile.lifestyle.commuteReturnWalkKm ?? ""}
-                onChange={(v) =>
-                  life("commuteReturnWalkKm", v === "" ? undefined : Number(v))
-                }
-              />
-            )}
-            {profile.lifestyle.commuteReturnMode === "bike" && (
-              <Field
-                label="퇴근 자전거 시간 (분)"
-                name="commuteReturnBikeMinutes"
-                type="number"
-                min={0}
-                max={300}
-                value={profile.lifestyle.commuteReturnBikeMinutes ?? ""}
-                onChange={(v) =>
-                  life(
-                    "commuteReturnBikeMinutes",
-                    v === "" ? undefined : Number(v),
-                  )
-                }
-              />
-            )}
-            <Select
-              label="주말에 운동을 제외한 활동량은 어떤 편인가요?"
-              name="weekendActivity"
-              placeholder="선택해주세요"
-              value={
-                ["sedentary", "light", "active", "veryActive"].includes(
-                  profile.lifestyle.weekendActivity ?? "",
-                )
-                  ? profile.lifestyle.weekendActivity!
-                  : ""
-              }
-              onChange={(v) => life("weekendActivity", v)}
-              options={{
-                sedentary: "거의 집에서 앉거나 누워 있음",
-                light: "가벼운 외출, 장보기 등으로 조금 움직임",
-                active: "외출이 잦고 1~3시간 정도 걷거나 활동함",
-                veryActive: "대부분의 시간을 밖에서 활발하게 움직임",
-              }}
-            />
-          </>
+        {!initial && step === 2 && (
+          <GoalFields goal={goal} onChange={setGoal} automatic />
         )}
-        {step === 3 && (
-          <>
-            <p>평소 운동을 모두 선택해주세요.</p>
-            <div className="choices">
-              {Object.entries(exerciseLabels).map(([k, label]) => (
-                <button
-                  className={
-                    profile.habits.some((h) => h.kind === k)
-                      ? "choice selected"
-                      : "choice"
-                  }
-                  key={k}
-                  aria-pressed={profile.habits.some((h) => h.kind === k)}
-                  onClick={() =>
-                    setProfile((p) => ({
-                      ...p,
-                      habits: p.habits.some((h) => h.kind === k)
-                        ? p.habits.filter((h) => h.kind !== k)
-                        : [
-                            ...p.habits,
-                            {
-                              kind: k as Habit["kind"],
-                              sessions: 1,
-                              minutes: 30,
-                              intensity: "moderate",
-                            },
-                          ],
-                    }))
-                  }
-                >
-                  {label}
-                </button>
-              ))}
-              <button
-                className={
-                  !profile.habits.length ? "choice selected" : "choice"
-                }
-                aria-pressed={!profile.habits.length}
-                onClick={() => update("habits", [])}
-              >
-                운동하지 않음
-              </button>
-            </div>
-            {profile.habits.map((h) => (
-              <Card key={h.kind}>
-                <h2>{exerciseLabels[h.kind]}</h2>
-                <div className="two">
-                  <Field
-                    label="주간 횟수"
-                    type="number"
-                    value={h.sessions}
-                    min={1}
-                    max={21}
-                    onChange={(v) =>
-                      habit(h.kind, {
-                        sessions: v === "" ? NaN : Number(v),
-                      })
-                    }
-                  />
-                  <Field
-                    label="평균 시간 (분)"
-                    type="number"
-                    value={h.minutes}
-                    min={1}
-                    max={600}
-                    onChange={(v) =>
-                      habit(h.kind, { minutes: v === "" ? NaN : Number(v) })
-                    }
-                  />
-                </div>
-                <Select
-                  label="운동 강도"
-                  value={h.intensity}
-                  onChange={(v) =>
-                    habit(h.kind, { intensity: v as Habit["intensity"] })
-                  }
-                  options={{
-                    light: "가볍게",
-                    moderate: "보통",
-                    hard: "격하게",
-                  }}
-                />
-                {h.kind === "running" && (
-                  <div className="two">
-                    <Field
-                      label="평균 거리 (km, 선택)"
-                      type="number"
-                      value={h.distance ?? ""}
-                      onChange={(v) =>
-                        habit(h.kind, {
-                          distance: v === "" ? undefined : Number(v),
-                        })
-                      }
-                    />
-                    <Field
-                      label="페이스 (분/km, 선택)"
-                      type="number"
-                      value={h.pace ?? ""}
-                      onChange={(v) =>
-                        habit(h.kind, {
-                          pace: v === "" ? undefined : Number(v),
-                        })
-                      }
-                    />
-                  </div>
-                )}
-              </Card>
-            ))}
-          </>
+        {!initial && step === 3 && (
+          <CycleFields cycle={cycle} onChange={setCycle} weeklyOnly />
         )}
-        {step === 4 && result && (
+        {step === summaryStep && result && (
           <>
             <Card className="tinted">
               <Metric label="예상 기초대사량" value={kcal(result.bmr)} />
+            </Card>
+            <Card>
+              <h2>설정한 목표</h2>
+              <Metric label="관리 목표" value={goalLabels[goal.kind]} />
               <Metric
-                label="운동하지 않는 날 예상 소비량"
-                value={kcal(result.rest)}
-              />
-              <Metric
-                label="운동하는 날 예상 소비량"
-                value={kcal(result.exerciseDay)}
-              />
-              <Metric
-                label="주간 평균 하루 소비량"
-                value={kcal(result.average)}
+                label="하루 목표 칼로리 잔고"
+                value={
+                  goal.balance === 0
+                    ? "균형 유지"
+                    : (goal.balance > 0 ? "+" : "−") +
+                      kcal(Math.abs(goal.balance))
+                }
               />
             </Card>
-            <p>계산 결과는 추정치로, 실제 소비량과 차이가 있을 수 있어요.</p>
-          </>
-        )}
-        {step === 5 && (
-          <>
-            <GoalFields goal={goal} onChange={setGoal} automatic />
-            {result && (
-              <Card>
+            <Card>
+              <h2>설정한 주기</h2>
+              <Metric
+                label="관리 주기"
+                value={
+                  cycle.kind === "daily"
+                    ? "매일"
+                    : cycle.kind === "weekly"
+                      ? "매주"
+                      : cycle.days + "일"
+                }
+              />
+              {cycle.kind === "weekly" && (
                 <Metric
-                  label="비운동일 목표 섭취량"
-                  value={kcal(result.rest + goal.balance)}
+                  label="시작 요일"
+                  value={
+                    [
+                      "일요일",
+                      "월요일",
+                      "화요일",
+                      "수요일",
+                      "목요일",
+                      "금요일",
+                      "토요일",
+                    ][cycle.weekday]
+                  }
                 />
-                {(result.rest + goal.balance < result.bmr ||
-                  Math.abs(goal.balance) > 500) && (
-                  <p className="warning">
-                    목표 섭취량이 기초대사량보다 낮거나 조정 폭이 커요. 무리한
-                    제한은 피하고 건강 상태에 맞게 목표를 조정해주세요.
-                  </p>
-                )}
-              </Card>
-            )}
-          </>
-        )}
-        {step === 6 && (
-          <>
-            <CycleFields cycle={cycle} onChange={setCycle} weeklyOnly />
-            {initial && (
-              <p className="notice">
-                새 결과는 내일부터 적용해요. 오늘과 과거 기록의 계산 기준은
-                유지돼요.
-              </p>
-            )}
+              )}
+              {cycle.kind === "custom" && (
+                <Metric label="주기 기준 시작일" value={cycle.anchor} />
+              )}
+            </Card>
+            <p>계산 결과는 추정치로, 실제 소비량과 차이가 있을 수 있어요.</p>
           </>
         )}
         {error && (
@@ -806,7 +553,7 @@ export default function Onboarding({
             {error}
           </p>
         )}
-        {initial && step === 4 && (
+        {initial && step === summaryStep && (
           <p className="notice">
             새 결과는 내일부터 적용해요. 오늘과 과거 기록의 계산 기준은
             유지돼요.
@@ -819,13 +566,11 @@ export default function Onboarding({
             ? "저장 중…"
             : step === 0
               ? "계산 시작하기"
-              : step === 4
+              : step === summaryStep
                 ? initial
                   ? "계산 결과 저장하기"
-                  : "이 결과로 시작하기"
-                : step === 6
-                  ? "설정 완료하기"
-                  : "다음"}
+                  : "설정 완료하기"
+                : "다음"}
         </Action>
         <Action
           secondary
