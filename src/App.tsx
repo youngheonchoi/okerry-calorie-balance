@@ -19,6 +19,7 @@ import Calendar from "./pages/Calendar";
 import Records from "./pages/Records";
 import My from "./pages/My";
 import Onboarding from "./pages/Onboarding";
+import InlineBannerAd from "./components/InlineBannerAd";
 import "./App.css";
 import { SafeArea, graniteEvent } from "@apps-in-toss/web-framework";
 import { errorMessage } from "./domain/format";
@@ -45,6 +46,7 @@ export default function App() {
     [today, setToday] = useState(localDate),
     [mealType, setMealType] = useState<MealType | undefined>();
   const saving = useRef(false);
+  const tabScroll = useRef<HTMLDivElement>(null);
   const recordSwipeStart = useRef<{ x: number; y: number } | null>(null);
   async function load() {
     setLoading(true);
@@ -128,6 +130,7 @@ export default function App() {
   }
   function changeTab(next: Tab) {
     setTab(next);
+    tabScroll.current?.scrollTo(0, 0);
     window.scrollTo(0, 0);
   }
   function openRecords(kind: RecordKind, day: string, type?: MealType) {
@@ -190,13 +193,16 @@ export default function App() {
     records: !wallet?.meals.some((item) => item.date === today),
   };
   const activeTabIndex = tabEntries.findIndex(([key]) => key === tab);
+  const hasTabs = !loading && !loadError && !onboarding && initialized;
   const initial: Profile | undefined = initialized
     ? (effective(wallet.tdee_history, addDays(today, 1))?.profile ??
       wallet.profile ??
       undefined)
     : undefined;
   return (
-    <main className={`app-shell${onboarding ? " onboarding-shell" : ""}`}>
+    <main
+      className={`app-shell${onboarding ? " onboarding-shell" : ""}${hasTabs ? " with-tabs" : ""}`}
+    >
       {loading ? (
         <div className="loading" role="status">
           <span className="loading-dot" />
@@ -291,101 +297,106 @@ export default function App() {
             </div>
           ) : (
             <>
-              {error && (
-                <p role="alert" className="error">
-                  {error}
-                </p>
-              )}
-              {tab === "home" && (
-                <Home
-                  key={today}
-                  wallet={wallet}
-                  openActivity={() => changeTab("activity")}
-                  openRecords={openRecords}
-                  today={today}
-                />
-              )}
-              {tab === "activity" && (
-                <Activity
-                  key={today}
-                  wallet={wallet}
-                  today={today}
-                  save={save}
-                  busy={busy}
-                />
-              )}
-              {tab === "records" && (
-                <div
-                  className="record-swipe-area"
-                  onTouchStart={startRecordSwipe}
-                  onTouchEnd={endRecordSwipe}
-                  onTouchCancel={() => {
-                    recordSwipeStart.current = null;
-                  }}
-                >
-                  <div
-                    className="record-kind-switch"
-                    role="group"
-                    aria-label="기록 종류"
-                    data-kind={recordKind}
-                  >
-                    <button
-                      type="button"
-                      aria-pressed={recordKind === "meal"}
-                      onClick={() => {
-                        setRecordKind("meal");
-                        setMealType(undefined);
-                      }}
-                    >
-                      식단
-                    </button>
-                    <button
-                      type="button"
-                      aria-pressed={recordKind === "exercise"}
-                      onClick={() => {
-                        setRecordKind("exercise");
-                        setMealType(undefined);
-                      }}
-                    >
-                      운동
-                    </button>
-                  </div>
-                  <div
-                    key={recordKind}
-                    className={`record-swipe-panel ${recordKind}`}
-                  >
-                    <Records
+              <div className="tab-content-scroll" ref={tabScroll}>
+                <div className="tab-content-inner">
+                  {error && (
+                    <p role="alert" className="error">
+                      {error}
+                    </p>
+                  )}
+                  {tab === "home" && (
+                    <Home
+                      key={today}
                       wallet={wallet}
-                      kind={recordKind}
-                      date={date}
-                      mealType={mealType}
+                      openActivity={() => changeTab("activity")}
+                      openRecords={openRecords}
+                      today={today}
+                    />
+                  )}
+                  {tab === "activity" && (
+                    <Activity
+                      key={today}
+                      wallet={wallet}
+                      today={today}
                       save={save}
                       busy={busy}
                     />
-                  </div>
+                  )}
+                  {tab === "records" && (
+                    <div
+                      className="record-swipe-area"
+                      onTouchStart={startRecordSwipe}
+                      onTouchEnd={endRecordSwipe}
+                      onTouchCancel={() => {
+                        recordSwipeStart.current = null;
+                      }}
+                    >
+                      <div
+                        className="record-kind-switch"
+                        role="group"
+                        aria-label="기록 종류"
+                        data-kind={recordKind}
+                      >
+                        <button
+                          type="button"
+                          aria-pressed={recordKind === "meal"}
+                          onClick={() => {
+                            setRecordKind("meal");
+                            setMealType(undefined);
+                          }}
+                        >
+                          식단
+                        </button>
+                        <button
+                          type="button"
+                          aria-pressed={recordKind === "exercise"}
+                          onClick={() => {
+                            setRecordKind("exercise");
+                            setMealType(undefined);
+                          }}
+                        >
+                          운동
+                        </button>
+                      </div>
+                      <div
+                        key={recordKind}
+                        className={`record-swipe-panel ${recordKind}`}
+                      >
+                        <Records
+                          wallet={wallet}
+                          kind={recordKind}
+                          date={date}
+                          mealType={mealType}
+                          save={save}
+                          busy={busy}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {tab === "calendar" && (
+                    <Calendar
+                      key={today}
+                      wallet={wallet}
+                      today={today}
+                      save={save}
+                      busy={busy}
+                    />
+                  )}
+                  {tab === "my" && (
+                    <My
+                      wallet={wallet}
+                      save={save}
+                      busy={busy}
+                      recalculate={() => {
+                        setOnboarding(true);
+                        window.scrollTo(0, 0);
+                      }}
+                      reset={reset}
+                    />
+                  )}
+                  <InlineBannerAd key={tab} placement={tab} />
                 </div>
-              )}
-              {tab === "calendar" && (
-                <Calendar
-                  key={today}
-                  wallet={wallet}
-                  today={today}
-                  save={save}
-                  busy={busy}
-                />
-              )}
-              {tab === "my" && (
-                <My
-                  wallet={wallet}
-                  save={save}
-                  busy={busy}
-                  recalculate={() => {
-                    setOnboarding(true);
-                    window.scrollTo(0, 0);
-                  }}
-                  reset={reset}
-                />
-              )}
+              </div>
               <nav className="floating-tabs" aria-label="주 메뉴">
                 <div className="floating-tabs-track">
                   <span

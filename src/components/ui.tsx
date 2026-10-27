@@ -134,7 +134,15 @@ export function Modal({
   const titleId = useId();
   useEffect(() => {
     const dialog = ref.current;
-    dialog?.showModal();
+    const content = dialog?.querySelector<HTMLElement>(".dialog-content");
+    // Prevent showModal() from auto-selecting a field/button or opening the keyboard.
+    // Restore interaction immediately after opening; user-directed focus still works.
+    content?.setAttribute("inert", "");
+    try {
+      dialog?.showModal();
+    } finally {
+      content?.removeAttribute("inert");
+    }
     return () => dialog?.close();
   }, []);
   return (

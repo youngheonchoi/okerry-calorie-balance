@@ -4,5 +4,8 @@ import react from "@vitejs/plugin-react";
 import aitDevtools from "@apps-in-toss/devtools/unplugin";
 
 export default defineConfig({
-  plugins: [aitDevtools.vite(), react()],
+  plugins: [
+    aitDevtools.vite({ initialState: { appVersion: "5.247.0" } }),
+    react(),
+  ],
 });
