@@ -13,6 +13,7 @@ import {
 } from "../domain/model";
 import { cycleSchema, goalSchema } from "../domain/validation";
 import { CycleFields, GoalFields } from "./Onboarding";
+import CalorieLevelCard from "../components/CalorieLevelCard";
 const normalizeFoodName = (name: string) => name.trim().toLocaleLowerCase();
 
 export default function My({
@@ -149,6 +150,7 @@ export default function My({
   return (
     <>
       <h1>마이페이지</h1>
+      <CalorieLevelCard wallet={wallet} today={today} />
       <Card className="my-settings-card my-info-card">
         <div className="my-card-heading">
           <h2>내 정보</h2>

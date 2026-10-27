@@ -77,7 +77,12 @@ export default function Home({
         className={`balance-card${stats.remaining < 0 ? " over-budget" : ""}`}
       >
         <span>{stats.remaining < 0 ? "섭취량 초과" : "칼로리 잔고"}</span>
-        <div className="hero-number">{kcal(Math.abs(stats.remaining))}</div>
+        <div className="hero-number">
+          <span>{kcal(Math.abs(stats.remaining))}</span>
+          <span className="hero-number-caption">
+            {stats.remaining < 0 ? "초과" : "섭취 가능"}
+          </span>
+        </div>
         <div
           className={`meter${stats.remaining < 0 ? " over-budget" : ""}`}
           role="meter"
@@ -132,7 +137,7 @@ export default function Home({
                   ? "목표 적자 칼로리"
                   : goal.kind === "gain"
                     ? "목표 흑자 칼로리"
-                    : "목표 칼로리 수지"
+                    : "목표 수치"
               }
               value={balanceText(goal.balance)}
             />
@@ -224,7 +229,7 @@ export default function Home({
           })}
         </div>
         <div className="cycle-week-total">
-          <span>이번 주 누적 칼로리 잔고</span>
+          <span>이번 주 누적 적자 칼로리</span>
           <strong>
             {cycleBalance === 0
               ? "0 kcal"

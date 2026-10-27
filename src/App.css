@@ -52,6 +52,276 @@
   background: var(--surface);
   border-color: var(--line);
 }
+.calorie-tier-bronze {
+  --level-color: color-mix(
+    in srgb,
+    var(--adaptiveOrange600) 65%,
+    var(--adaptiveGrey600)
+  );
+  --level-strong: color-mix(in srgb, var(--adaptiveOrange800) 60%, var(--text));
+  --trophy-filter: sepia(0.65) saturate(1.8) hue-rotate(350deg) brightness(0.75);
+}
+.calorie-tier-silver {
+  --level-color: var(--adaptiveGrey500);
+  --level-strong: var(--adaptiveGrey700);
+  --trophy-filter: grayscale(1) brightness(1.12) contrast(0.9);
+}
+.calorie-tier-gold {
+  --level-color: var(--adaptiveYellow600);
+  --level-strong: color-mix(in srgb, var(--adaptiveYellow900) 60%, var(--text));
+  --trophy-filter: none;
+}
+.calorie-tier-emerald {
+  --level-color: var(--adaptiveGreen400);
+  --level-strong: color-mix(in srgb, var(--adaptiveGreen700) 60%, var(--text));
+  --trophy-filter: hue-rotate(56deg) saturate(0.8) brightness(1.1);
+}
+.calorie-tier-diamond {
+  --level-color: var(--adaptiveTeal300);
+  --level-strong: var(--adaptiveTeal800);
+  --trophy-filter: hue-rotate(135deg) saturate(0.6) brightness(1.12);
+}
+.calorie-tier-ruby {
+  --level-color: var(--adaptiveRed500);
+  --level-strong: var(--adaptiveRed700);
+  --trophy-filter: none;
+}
+.card.calorie-level-card {
+  padding: 16px 20px;
+  border-radius: 20px;
+  border-color: color-mix(in srgb, var(--level-color) 18%, var(--surface));
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--level-color) 13%, var(--surface)),
+    var(--surface) 78%
+  );
+}
+.calorie-level-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: -8px -8px 8px 0;
+}
+.calorie-level-heading h2 {
+  margin: 0;
+  font-size: 15px;
+}
+.calorie-level-heading > button {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+}
+.calorie-level-overview {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 12px;
+}
+.calorie-level-badge {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 88px;
+  min-height: 88px;
+  padding: 10px 6px;
+  border: 1px solid color-mix(in srgb, var(--level-color) 24%, var(--surface));
+  border-radius: 28px;
+  background: var(--surface);
+  color: var(--level-strong);
+  font-size: 13px;
+  font-weight: 700;
+}
+.calorie-level-trophy {
+  position: relative;
+  display: flex;
+  width: 40px;
+  height: 40px;
+}
+.calorie-level-trophy > :first-child {
+  filter: var(--trophy-filter);
+}
+.calorie-level-ruby-stone {
+  position: absolute;
+  top: 12px;
+  left: 15px;
+  width: 10px;
+  height: 13px;
+  clip-path: polygon(50% 0, 100% 30%, 85% 75%, 50% 100%, 15% 75%, 0 30%);
+  background: linear-gradient(
+    135deg,
+    var(--adaptiveRed200),
+    var(--adaptiveRed500) 40%,
+    var(--adaptiveRed800) 85%
+  );
+}
+.calorie-level-details {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.calorie-level-days,
+.calorie-level-caption {
+  color: var(--muted);
+  font-size: 12px;
+}
+.calorie-level-weight {
+  color: var(--level-strong);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.calorie-level-card .metric {
+  gap: 8px;
+  padding: 8px 0 12px;
+  font-size: 13px;
+}
+.calorie-level-card .metric strong {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.calorie-level-progress-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+.calorie-level-progress-label strong {
+  color: var(--level-strong);
+}
+progress.calorie-level-progress {
+  display: block;
+  width: 100%;
+  height: 10px;
+  overflow: hidden;
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  background: var(--line);
+  accent-color: var(--level-color);
+}
+.calorie-level-progress::-webkit-progress-bar {
+  border-radius: 999px;
+  background: var(--line);
+}
+.calorie-level-progress::-webkit-progress-value {
+  border-radius: 999px;
+  background: var(--level-color);
+}
+.calorie-level-progress::-moz-progress-bar {
+  border-radius: 999px;
+  background: var(--level-color);
+}
+.calorie-level-gauge {
+  position: relative;
+}
+.calorie-level-gauge.is-max {
+  --level-color: color-mix(in srgb, var(--adaptiveRed500) 75%, var(--text));
+  margin: 6px 0;
+}
+.calorie-level-gauge.is-max .calorie-level-progress {
+  height: 24px;
+}
+.calorie-level-max-label {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--on-action);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  pointer-events: none;
+}
+.calorie-level-remaining {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+}
+.dialog-content:has(> .calorie-level-help) {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 50px);
+  overflow: hidden;
+}
+.calorie-level-help {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+.calorie-level-help:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+}
+.calorie-level-help > p {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+.calorie-level-help-baseline {
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.calorie-level-help-baseline .metric {
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+.calorie-tier-guide {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.calorie-tier-guide h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+.calorie-tier-guide ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.calorie-tier-guide li {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  font-size: 13px;
+}
+.calorie-tier-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--level-color);
+}
+.dialog-content:has(> .calorie-level-help) > h2 {
+  flex: none;
+  margin: 0 0 16px;
+  font-size: 16px;
+}
+.dialog-content:has(> .calorie-level-help) > button.wallet-action {
+  flex: none;
+  --button-font-size: 13px !important;
+  --button-min-height: 44px !important;
+  --button-padding: 0 16px !important;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 16px;
+}
+.dialog-content:has(> .calorie-level-help) > button.wallet-action span {
+  font-size: 13px !important;
+}
 .my-card-heading {
   display: flex;
   align-items: center;
@@ -267,12 +537,23 @@
   font-size: 15px;
 }
 .hero-number {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
   color: var(--brand-strong);
   font-size: 36px;
   letter-spacing: -1.3px;
   font-weight: 700;
   margin: 10px 0 18px;
   line-height: 1.3;
+}
+.hero-number-caption {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0;
+  white-space: nowrap;
 }
 .balance-card.over-budget .hero-number {
   color: #b85d16;

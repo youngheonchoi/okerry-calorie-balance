@@ -357,3 +357,31 @@ export function calculateRecordedBalance(
     .filter((date) => date >= wallet.meta.startedOn && date <= today)
     .reduce((total, date) => total + (daily(wallet, date)?.balance ?? 0), 0);
 }
+
+// Personalized app progress, not a prediction of measured weight loss.
+export function getLevelBaselineBmr(wallet: Wallet): number {
+  // Recalculation appends history; keep the earliest baseline for stable levels.
+  return [...wallet.tdee_history].sort((a, b) =>
+    a.effectiveFrom.localeCompare(b.effectiveFrom),
+  )[0].bmr;
+}
+export function calculateCalorieLevel(
+  balance: number,
+  baselineBmr: number,
+  startedOn: string,
+  today = localDate(),
+) {
+  const deficit = Math.max(0, Math.round(-balance * 1e6) / 1e6);
+  const caloriesPerLevel = baselineBmr * 5;
+  const level = Math.floor(deficit / caloriesPerLevel);
+  const progressCalories = deficit - level * caloriesPerLevel;
+  return {
+    level,
+    caloriesPerLevel,
+    estimatedKg: deficit / caloriesPerLevel,
+    progressCalories,
+    progressPercent: (progressCalories / caloriesPerLevel) * 100,
+    remainingCalories: caloriesPerLevel - progressCalories,
+    days: Math.max(0, ordinal(today) - ordinal(startedOn)),
+  };
+}

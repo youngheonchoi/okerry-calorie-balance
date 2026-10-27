@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   addDays,
   calculateBMR,
+  calculateCalorieLevel,
   calculateCycleBalance,
   calculateDailyActivityAdjustment,
   calculateDailyExpenditure,
@@ -13,11 +14,95 @@ import {
   datesBetween,
   estimateDailyTDEE,
   getCycleDateRange,
+  getLevelBaselineBmr,
   historicalCycle,
 } from "../../src/domain/calculations";
 import { stamp } from "../../src/domain/model";
 import { exercise, fixture } from "../fixtures";
+import { getCalorieLevelTier } from "../../src/domain/calorieLevels";
 describe("energy accounting", () => {
+  it.each([
+    [0, 0, 0, 7700],
+    [500, 0, 0, 7700],
+    [-7699, 0, 7699, 1],
+    [-7700, 1, 0, 7700],
+    [-7699.999999999999, 1, 0, 7700],
+    [-15400, 2, 0, 7700],
+    [-19250, 2, 3850, 3850],
+  ])(
+    "converts balance %s into personalized levels and the next gauge",
+    (balance, level, progressCalories, remainingCalories) => {
+      expect(
+        calculateCalorieLevel(balance, 1540, "2026-10-01", "2026-10-27"),
+      ).toMatchObject({ level, progressCalories, remainingCalories, days: 26 });
+    },
+  );
+  it("counts start days by calendar date and never shows negative elapsed days", () => {
+    expect(
+      calculateCalorieLevel(0, 1500, "2026-10-27", "2026-10-27").days,
+    ).toBe(0);
+    expect(
+      calculateCalorieLevel(0, 1500, "2026-10-28", "2026-10-27").days,
+    ).toBe(0);
+  });
+  it("uses the same personalized threshold for levels and converted kg", () => {
+    const smaller = calculateCalorieLevel(
+      -7500,
+      1500,
+      "2026-10-01",
+      "2026-10-27",
+    );
+    const larger = calculateCalorieLevel(
+      -10000,
+      2000,
+      "2026-10-01",
+      "2026-10-27",
+    );
+    expect(smaller).toMatchObject({
+      level: 1,
+      caloriesPerLevel: 7500,
+      progressCalories: 0,
+    });
+    expect(larger).toMatchObject({
+      level: 1,
+      caloriesPerLevel: 10000,
+      progressCalories: 0,
+    });
+    expect(smaller.estimatedKg).toBe(1);
+    expect(larger.estimatedKg).toBe(1);
+    expect(
+      calculateCalorieLevel(-18750, 1500, "2026-10-01", "2026-10-27")
+        .estimatedKg,
+    ).toBe(2.5);
+  });
+  it("keeps the original level baseline when recalculated BMR histories are appended or unordered", () => {
+    const wallet = fixture();
+    const originalBmr = wallet.tdee_history[0].bmr;
+    wallet.tdee_history.unshift({
+      ...wallet.tdee_history[0],
+      ...stamp(),
+      effectiveFrom: "2026-10-28",
+      bmr: 2000,
+    });
+    expect(getLevelBaselineBmr(wallet)).toBe(originalBmr);
+    expect(wallet.tdee_history[0].effectiveFrom).toBe("2026-10-28");
+  });
+  it.each([
+    [0, "bronze"],
+    [1, "bronze"],
+    [2, "silver"],
+    [3, "silver"],
+    [4, "gold"],
+    [6, "gold"],
+    [7, "emerald"],
+    [9, "emerald"],
+    [10, "diamond"],
+    [14, "diamond"],
+    [15, "ruby"],
+    [100, "ruby"],
+  ])("selects the trophy tier at level %s", (level, tier) => {
+    expect(getCalorieLevelTier(Number(level)).key).toBe(tier);
+  });
   it("sums only recorded dates once and updates when a day's last record is removed", () => {
     const wallet = fixture();
     expect(calculateRecordedBalance(wallet, "2026-10-03")).toBe(0);

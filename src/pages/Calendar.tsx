@@ -118,7 +118,7 @@ export default function Calendar({
         aria-label="칼로리 잔고 요약"
       >
         <Metric
-          label="총 누적 칼로리 잔고"
+          label="누적 적자 칼로리"
           value={kcal(recordedBalance).replace(" ", "")}
         />
       </section>
