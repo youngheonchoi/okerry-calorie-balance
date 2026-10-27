@@ -26,7 +26,7 @@ test("restores an old onboarding draft into the shortened flow", async ({
   await page
     .getByRole("button", { name: "아무 곳이나 터치해 시작하기", exact: true })
     .click();
-  await expect(page.locator(".onboarding-header .eyebrow")).toHaveText("3/4");
+  await expect(page.locator(".onboarding-progress .eyebrow")).toHaveText("3/4");
   await expect(page.getByLabel("시작 요일", { exact: true })).toHaveValue("4");
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await expect(
@@ -54,7 +54,7 @@ async function onboard(page: Page) {
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 400 });
   const fixedControls = await page.locator(".onboarding").evaluate((root) => {
-    const header = root.querySelector(".onboarding-header")!;
+    const header = root.querySelector(".onboarding-progress")!;
     const content = root.querySelector<HTMLElement>(".onboarding-content")!;
     const footer = root.querySelector(".footer-actions")!;
     const headerTop = header.getBoundingClientRect().top;
@@ -71,10 +71,10 @@ async function onboard(page: Page) {
     return result;
   });
   expect(fixedControls.scrollTop).toBeGreaterThan(0);
-  expect(fixedControls.headerTopAfter).toBe(fixedControls.headerTop);
+  expect(fixedControls.headerTopAfter).toBeLessThan(fixedControls.headerTop);
   expect(fixedControls.footerTopAfter).toBe(fixedControls.footerTop);
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.locator(".onboarding-header .eyebrow")).toHaveText("2/4");
+  await expect(page.locator(".onboarding-progress .eyebrow")).toHaveText("2/4");
   await expect(
     page.getByText("비운동일 목표 섭취량", { exact: true }),
   ).toHaveCount(0);
@@ -82,10 +82,10 @@ async function onboard(page: Page) {
     .getByLabel("어떤 목표로 칼로리를 관리하시나요?", { exact: true })
     .selectOption("lose");
   await page.getByRole("button", { name: "다음", exact: true }).click();
-  await expect(page.locator(".onboarding-header .eyebrow")).toHaveText("3/4");
+  await expect(page.locator(".onboarding-progress .eyebrow")).toHaveText("3/4");
   await page.getByLabel("시작 요일", { exact: true }).selectOption("3");
   await page.getByRole("button", { name: "다음", exact: true }).click();
-  await expect(page.locator(".onboarding-header .eyebrow")).toHaveText("4/4");
+  await expect(page.locator(".onboarding-progress .eyebrow")).toHaveText("4/4");
   await expect(
     page.getByText("예상 기초대사량", { exact: true }),
   ).toBeVisible();
@@ -102,7 +102,11 @@ async function onboard(page: Page) {
   await expect(
     page.getByText("운동하지 않는 날 예상 소비량", { exact: true }),
   ).toHaveCount(0);
-  await page.getByRole("button", { name: "이전 단계", exact: true }).click();
+  await page.evaluate(() =>
+    (
+      window as unknown as { __ait: { trigger: (event: string) => void } }
+    ).__ait.trigger("backEvent"),
+  );
   await expect(page.getByLabel("시작 요일", { exact: true })).toHaveValue("3");
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page
@@ -429,9 +433,7 @@ test("saves incomplete onboarding fields and keeps a white background under dark
   await page
     .getByRole("button", { name: "아무 곳이나 터치해 시작하기", exact: true })
     .click();
-  await expect(page.getByLabel("나이", { exact: true })).toHaveValue(
-    "32",
-  );
+  await expect(page.getByLabel("나이", { exact: true })).toHaveValue("32");
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -471,9 +473,7 @@ test("recalculation preserves today's balance", async ({ page }) => {
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await expect(page.getByText("체중 감량", { exact: true })).toBeVisible();
   await expect(page.getByText("수요일", { exact: true })).toBeVisible();
-  await page
-    .getByRole("button", { name: "저장하기", exact: true })
-    .click();
+  await page.getByRole("button", { name: "저장하기", exact: true }).click();
   await expect(page.locator(".balance-card")).toHaveText(oldToday, {
     useInnerText: true,
   });

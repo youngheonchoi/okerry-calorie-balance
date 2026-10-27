@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { fixture } from "../fixtures";
 
-test("exercise records use compact rows and horizontal modal actions", async ({
+test("exercise records use compact rows and one save action with a modal close icon", async ({
   page,
 }) => {
   await page.addInitScript((wallet) => {
@@ -26,11 +26,14 @@ test("exercise records use compact rows and horizontal modal actions", async ({
   const save = dialog.getByRole("button", { name: "저장하기", exact: true });
   const closeBox = (await close.boundingBox())!;
   const saveBox = (await save.boundingBox())!;
-  expect(closeBox.x).toBeLessThan(saveBox.x);
-  expect(closeBox.y).toBe(saveBox.y);
+  expect(closeBox.x).toBeGreaterThan(saveBox.x);
+  expect(closeBox.y).toBeLessThan(saveBox.y);
   expect(closeBox.height).toBe(44);
+  await expect(dialog.locator(".meal-form-actions button")).toHaveCount(1);
   await page.getByLabel("운동 종류", { exact: true }).selectOption("running");
-  await expect(page.getByLabel("추가 소비량 직접 입력 (kcal, 선택)", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByLabel("추가 소비량 직접 입력 (kcal, 선택)", { exact: true }),
+  ).toHaveCount(0);
   await save.click();
   const row = page.locator(".exercise-record-row");
   await expect(row.getByText("러닝", { exact: true })).toBeVisible();

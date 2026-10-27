@@ -385,9 +385,7 @@ export default function Onboarding({
           else goToStep(step - 1);
         },
         onError: () =>
-          setError(
-            "뒤로가기를 연결하지 못했어요. 이전 단계 버튼을 이용해주세요.",
-          ),
+          setError("뒤로가기를 처리하지 못했어요. 잠시 후 다시 시도해주세요."),
       }),
     [step, busy, onCancel],
   );
@@ -472,13 +470,13 @@ export default function Onboarding({
   if (!ready) return <p role="status">임시 입력을 불러오고 있어요…</p>;
   return (
     <div className="onboarding">
-      <header className="onboarding-header">
-        <div className="eyebrow">
-          {step > 0 ? `${step}/${summaryStep}` : ""}
-        </div>
-        <progress max={summaryStep} value={step} aria-label="설정 진행률" />
-      </header>
       <div className="onboarding-content" ref={contentRef}>
+        <div className="onboarding-progress">
+          <div className="eyebrow">
+            {step > 0 ? `${step}/${summaryStep}` : ""}
+          </div>
+          <progress max={summaryStep} value={step} aria-label="설정 진행률" />
+        </div>
         <h1>{titles[step]}</h1>
         {step === 0 && (
           <>
@@ -656,12 +654,6 @@ export default function Onboarding({
                   ? "저장하기"
                   : "설정 완료하기"
                 : "다음"}
-        </Action>
-        <Action
-          disabled={busy}
-          onClick={() => (step === 0 ? onCancel() : goToStep(step - 1))}
-        >
-          {step === 0 ? "돌아가기" : "이전 단계"}
         </Action>
       </div>
     </div>

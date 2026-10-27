@@ -93,7 +93,7 @@ export default function App() {
           dialog.dispatchEvent(new Event("cancel", { cancelable: true }));
           return;
         }
-        setTab("home");
+        changeTab("home");
       },
       onError: () =>
         setError("뒤로가기를 연결하지 못했어요. 화면의 버튼을 이용해주세요."),

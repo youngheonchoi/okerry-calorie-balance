@@ -47,16 +47,13 @@
   min-width: 0;
   min-height: 0;
 }
-.onboarding-header {
-  flex: none;
-  padding: calc(12px + var(--safe-top, env(safe-area-inset-top, 0px))) 20px 12px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--line);
+.onboarding-progress {
+  margin-bottom: 16px;
 }
-.onboarding-header .eyebrow {
+.onboarding-progress .eyebrow {
   margin-bottom: 8px;
 }
-.onboarding-header progress {
+.onboarding-progress progress {
   display: block;
 }
 .onboarding-content {
@@ -66,7 +63,7 @@
   scrollbar-gutter: stable;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
-  padding: 16px 20px 24px;
+  padding: calc(16px + var(--safe-top, env(safe-area-inset-top, 0px))) 20px 24px;
 }
 .card {
   background: var(--surface);
@@ -337,18 +334,6 @@ progress.calorie-level-progress {
   flex: none;
   margin: 0 0 16px;
   font-size: 16px;
-}
-.dialog-content:has(> .calorie-level-help) > button.wallet-action {
-  flex: none;
-  --button-font-size: 13px !important;
-  --button-min-height: 44px !important;
-  --button-padding: 0 16px !important;
-  height: 44px;
-  min-height: 44px;
-  padding: 0 16px;
-}
-.dialog-content:has(> .calorie-level-help) > button.wallet-action span {
-  font-size: 13px !important;
 }
 .my-card-heading {
   display: flex;
@@ -1057,7 +1042,7 @@ progress.calorie-level-progress {
 }
 .calendar-activity-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   margin-top: 16px;
 }
@@ -1073,9 +1058,6 @@ progress.calorie-level-progress {
 }
 .calendar-activity-actions button.wallet-action span {
   font-size: 13px !important;
-}
-.dialog-content:has(> .calendar-activity-editor) > button:last-child {
-  display: none;
 }
 .dialog-content:has(> .calendar-record-editor) > h2 {
   font-size: 16px;
@@ -1784,13 +1766,7 @@ dialog:has(.food-keyword-dialog) button.wallet-action span {
 }
 .intro-footer-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-.intro-footer-actions > button:first-child {
-  order: 2;
-}
-.intro-footer-actions > button:last-child {
-  order: 1;
+  grid-template-columns: minmax(0, 1fr);
 }
 .intro-footer-actions button.wallet-action {
   --button-min-height: 44px !important;
@@ -1822,8 +1798,23 @@ dialog::backdrop {
   background: rgba(0, 0, 0, 0.45);
 }
 .dialog-content {
+  position: relative;
   padding: 24px;
   overflow: auto;
+}
+.dialog-content > .dialog-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+}
+.dialog-content > h2 {
+  padding-right: 36px;
+  font-size: 16px;
 }
 .dialog-content > .card {
   padding: 18px;
@@ -1831,13 +1822,9 @@ dialog::backdrop {
 .dialog-content > button:last-child {
   margin-top: 12px;
 }
-.dialog-content:has(> :is(.meal-record-form, .exercise-record-form))
-  > button:last-child {
-  display: none;
-}
 .meal-form-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   margin-top: 12px;
 }
@@ -1854,7 +1841,7 @@ dialog::backdrop {
 }
 .dialog-content:has(> .record-delete-description) {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   column-gap: 8px;
 }
 .dialog-content:has(> .record-delete-description) > * {
@@ -1878,7 +1865,7 @@ dialog::backdrop {
 }
 .dialog-content:has(> .goal-settings-dialog) {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   column-gap: 8px;
 }
 .dialog-content:has(> .goal-settings-dialog) > * {
@@ -1896,9 +1883,6 @@ dialog::backdrop {
   min-height: 44px;
   margin-top: 8px;
   background-color: var(--brand) !important;
-}
-.dialog-content:has(> .goal-settings-dialog) > button.wallet-action:last-child {
-  order: 1;
 }
 .dialog-content:has(> .goal-settings-dialog) > button.wallet-action span {
   font-size: 13px !important;

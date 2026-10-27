@@ -312,7 +312,12 @@ export default function Records({
         </section>
       )}
       {meal && (
-        <Modal title="음식 기록" onClose={() => setMeal(null)}>
+        <Modal
+          title="음식 기록"
+          onClose={() => {
+            if (!busy) setMeal(null);
+          }}
+        >
           <form
             className="meal-record-form"
             onSubmit={(e) => {
@@ -433,9 +438,6 @@ export default function Records({
               </p>
             )}
             <div className="meal-form-actions">
-              <Action disabled={busy} onClick={() => setMeal(null)}>
-                닫기
-              </Action>
               <Action type="submit" disabled={busy}>
                 저장하기
               </Action>
@@ -444,7 +446,12 @@ export default function Records({
         </Modal>
       )}
       {exercise && (
-        <Modal title="운동 기록" onClose={() => setExercise(null)}>
+        <Modal
+          title="운동 기록"
+          onClose={() => {
+            if (!busy) setExercise(null);
+          }}
+        >
           <form
             className="exercise-record-form"
             onSubmit={(e) => {
@@ -559,9 +566,6 @@ export default function Records({
               </p>
             )}
             <div className="meal-form-actions">
-              <Action disabled={busy} onClick={() => setExercise(null)}>
-                닫기
-              </Action>
               <Action type="submit" disabled={busy}>
                 저장하기
               </Action>

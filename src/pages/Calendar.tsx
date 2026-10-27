@@ -345,9 +345,6 @@ export default function Calendar({
                   >
                     기록 삭제
                   </button>
-                  <Action disabled={busy} onClick={() => setEditor(null)}>
-                    닫기
-                  </Action>
                 </div>
               </>
             ) : (

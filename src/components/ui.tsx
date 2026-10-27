@@ -1,4 +1,5 @@
-import { Button } from "@toss/tds-mobile";
+import { Button, IconButton } from "@toss/tds-mobile";
+import { adaptive } from "@toss/tds-colors";
 import { useEffect, useId, useRef, type ReactNode } from "react";
 export function Action({
   children,
@@ -156,11 +157,16 @@ export function Modal({
       }}
     >
       <div className="dialog-content">
+        <IconButton
+          className="dialog-close"
+          name="icon-x-mono"
+          aria-label="닫기"
+          iconSize={18}
+          color={adaptive.grey600}
+          onClick={onClose}
+        />
         <h2 id={titleId}>{title}</h2>
         {children}
-        <Action secondary onClick={onClose}>
-          닫기
-        </Action>
       </div>
     </dialog>
   );
