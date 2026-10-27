@@ -48,7 +48,7 @@ async function onboard(page: Page) {
   await page
     .getByRole("button", { name: "계산 시작하기", exact: true })
     .click();
-  await page.getByLabel("만 나이 (세)", { exact: true }).fill("30");
+  await page.getByLabel("나이", { exact: true }).fill("30");
   await page.getByLabel("키 (cm)", { exact: true }).fill("175");
   await page.getByLabel("현재 체중 (kg)", { exact: true }).fill("70");
   await page.getByRole("button", { name: "다음", exact: true }).click();
@@ -167,7 +167,7 @@ test("today's missing records mark activity and records tabs", async ({
   await expect(page.getByRole("heading", { name: "기록한 운동" })).toHaveCount(
     0,
   );
-  await expect(page.locator(".activity-level")).toHaveCount(6);
+  await expect(page.locator(".activity-level")).toHaveCount(5);
   await page.getByRole("button", { name: "3,000~6,000보 미만" }).click();
   await expect(activityTab.locator(".tab-alert")).toHaveCount(0);
   await expect(
@@ -237,7 +237,7 @@ test("activity changes today's TDEE and exercise adds to it", async ({
     );
   const initialBalance = await balance();
   await page.getByRole("button", { name: "활동", exact: true }).click();
-  await page.getByRole("button", { name: "15,000보 이상" }).click();
+  await page.getByRole("button", { name: "12,000보 이상" }).click();
   await page.getByRole("button", { name: "홈", exact: true }).click();
   const afterActivity = await balance();
   expect(afterActivity).toBeGreaterThan(initialBalance);
@@ -414,7 +414,7 @@ test("saves incomplete onboarding fields and keeps a white background under dark
   await page
     .getByRole("button", { name: "계산 시작하기", exact: true })
     .click();
-  await page.getByLabel("만 나이 (세)", { exact: true }).fill("32");
+  await page.getByLabel("나이", { exact: true }).fill("32");
   await expect
     .poll(async () =>
       page.evaluate(
@@ -429,7 +429,7 @@ test("saves incomplete onboarding fields and keeps a white background under dark
   await page
     .getByRole("button", { name: "아무 곳이나 터치해 시작하기", exact: true })
     .click();
-  await expect(page.getByLabel("만 나이 (세)", { exact: true })).toHaveValue(
+  await expect(page.getByLabel("나이", { exact: true })).toHaveValue(
     "32",
   );
   expect(
@@ -472,7 +472,7 @@ test("recalculation preserves today's balance", async ({ page }) => {
   await expect(page.getByText("체중 감량", { exact: true })).toBeVisible();
   await expect(page.getByText("수요일", { exact: true })).toBeVisible();
   await page
-    .getByRole("button", { name: "계산 결과 저장하기", exact: true })
+    .getByRole("button", { name: "저장하기", exact: true })
     .click();
   await expect(page.locator(".balance-card")).toHaveText(oldToday, {
     useInnerText: true,
@@ -598,7 +598,7 @@ test.describe("mobile viewport gestures", () => {
     await page
       .getByRole("button", { name: "계산 시작하기", exact: true })
       .click();
-    await page.getByLabel("만 나이 (세)", { exact: true }).fill("30");
+    await page.getByLabel("나이", { exact: true }).fill("30");
     await page.getByLabel("키 (cm)", { exact: true }).fill("175");
     await page.getByLabel("현재 체중 (kg)", { exact: true }).fill("70");
     await expect

@@ -151,43 +151,34 @@ export default function Home({
       <div className="home-record-flow">
         <p className="home-record-guide">1단계부터 기록해요</p>
         <div className="home-record-actions">
-          <Action onClick={openActivity}>
+          <Action onClick={openActivity} disabled={activityRecorded}>
             <span className="home-action-content">
-              <span
-                className={`home-action-stage${activityRecorded ? " done" : ""}`}
-              >
-                1단계
-                {activityRecorded && (
-                  <span className="home-action-complete">완료</span>
-                )}
+              <span className="home-action-stage">1단계</span>
+              <span className="home-action-label">
+                {activityRecorded ? "기록 완료" : "활동 기록"}
               </span>
-              <span className="home-action-label">활동 기록</span>
             </span>
           </Action>
-          <Action onClick={() => openRecords("meal", today)}>
+          <Action
+            onClick={() => openRecords("meal", today)}
+            disabled={mealRecorded}
+          >
             <span className="home-action-content">
-              <span
-                className={`home-action-stage${mealRecorded ? " done" : ""}`}
-              >
-                2단계
-                {mealRecorded && (
-                  <span className="home-action-complete">완료</span>
-                )}
+              <span className="home-action-stage">2단계</span>
+              <span className="home-action-label">
+                {mealRecorded ? "기록 완료" : "식단 기록"}
               </span>
-              <span className="home-action-label">식단 기록</span>
             </span>
           </Action>
-          <Action onClick={() => openRecords("exercise", today)}>
+          <Action
+            onClick={() => openRecords("exercise", today)}
+            disabled={exerciseRecorded}
+          >
             <span className="home-action-content">
-              <span
-                className={`home-action-stage${exerciseRecorded ? " done" : ""}`}
-              >
-                3단계
-                {exerciseRecorded && (
-                  <span className="home-action-complete">완료</span>
-                )}
+              <span className="home-action-stage">3단계</span>
+              <span className="home-action-label">
+                {exerciseRecorded ? "기록 완료" : "운동 기록"}
               </span>
-              <span className="home-action-label">운동 기록</span>
             </span>
           </Action>
         </div>

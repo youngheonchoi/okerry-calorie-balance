@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { Asset, IconButton } from "@toss/tds-mobile";
 import { ZodError } from "zod";
 import { Action, Card, Field, Metric, Select } from "../components/ui";
 import { errorMessage, kcal } from "../domain/format";
@@ -29,9 +30,9 @@ type Result = { profile: Profile; tdee: Tdee; goal: Goal; cycle: Cycle };
 const newProfile = (): Profile => ({
   ...stamp(),
   basis: "male",
-  age: NaN,
-  height: NaN,
-  weight: NaN,
+  age: 30,
+  height: 170,
+  weight: 65,
   lifestyle: {
     occupation: 0,
     workHours: 0,
@@ -48,6 +49,76 @@ const newProfile = (): Profile => ({
   },
   habits: [],
 });
+function BodyNumberField({
+  label,
+  name,
+  value,
+  defaultValue,
+  min,
+  max,
+  step = 1,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  name: string;
+  value: number;
+  defaultValue: number;
+  min: number;
+  max: number;
+  step?: number;
+  disabled: boolean;
+  onChange: (value: number) => void;
+}) {
+  const id = useId();
+  const adjust = (direction: number) => {
+    const current = Number.isFinite(value) ? value : defaultValue;
+    onChange(
+      Number(
+        Math.min(max, Math.max(min, current + direction * step)).toFixed(1),
+      ),
+    );
+  };
+  return (
+    <div className="field body-number-field">
+      <label htmlFor={id}>{label}</label>
+      <div className="body-number-control">
+        <IconButton
+          type="button"
+          name="icon-minus-mono"
+          className="body-number-adjust"
+          aria-label={`${label} 줄이기`}
+          disabled={disabled || value <= min}
+          onClick={() => adjust(-1)}
+        />
+        <input
+          id={id}
+          type="number"
+          name={name}
+          value={Number.isNaN(value) ? "" : value}
+          min={min}
+          max={max}
+          step={step}
+          required
+          disabled={disabled}
+          onChange={(event) =>
+            onChange(
+              event.target.value === "" ? NaN : Number(event.target.value),
+            )
+          }
+        />
+        <IconButton
+          type="button"
+          name="icon-plus-mono"
+          className="body-number-adjust"
+          aria-label={`${label} 늘리기`}
+          disabled={disabled || value >= max}
+          onClick={() => adjust(1)}
+        />
+      </div>
+    </div>
+  );
+}
 export function GoalFields({
   goal,
   onChange,
@@ -188,7 +259,11 @@ export default function Onboarding({
   onCancel: () => void;
   busy: boolean;
 }) {
-  const [profile, setProfile] = useState<Profile>(initial ?? newProfile),
+  const [profile, setProfile] = useState<Profile>(() =>
+      initial
+        ? { ...initial, weight: Math.round(initial.weight) }
+        : newProfile(),
+    ),
     [step, setStep] = useState(0),
     [correction, setCorrection] = useState(initialCorrection),
     [goal, setGoal] = useState(initialGoal ?? defaultGoal),
@@ -228,6 +303,13 @@ export default function Onboarding({
             if (check.success) {
               setProfile({
                 ...check.data,
+                age: Number.isFinite(check.data.age) ? check.data.age : 30,
+                height: Number.isFinite(check.data.height)
+                  ? check.data.height
+                  : 170,
+                weight: Number.isFinite(check.data.weight)
+                  ? Math.round(check.data.weight)
+                  : 65,
                 lifestyle: newProfile().lifestyle,
                 habits: [],
               });
@@ -317,12 +399,12 @@ export default function Onboarding({
   const titles = initial
     ? [
         "내 몸의 하루 소비 칼로리를 알아볼까요?",
-        "기본 신체 정보를 알려주세요",
+        "기본 정보를 알려주세요",
         "설정한 정보를 확인해주세요",
       ]
     : [
         "내 몸의 하루 소비 칼로리를 알아볼까요?",
-        "기본 신체 정보를 알려주세요",
+        "기본 정보를 알려주세요",
         "나에게 맞는 목표를 정해요",
         "한 주의 시작 요일을 정해요",
         "설정한 정보를 확인해주세요",
@@ -437,44 +519,47 @@ export default function Onboarding({
                       checked={profile.basis === basis}
                       onChange={() => update("basis", basis)}
                     />
+                    <span className="gender-icon" aria-hidden="true">
+                      <Asset.Icon
+                        name={basis === "male" ? "icon-man" : "icon-woman"}
+                        style={{ width: 24, height: 24 }}
+                      />
+                    </span>
                     {basis === "male" ? "남성" : "여성"}
                   </label>
                 ))}
               </div>
             </fieldset>
-            <Field
-              label="만 나이 (세)"
+            <BodyNumberField
+              label="나이"
               name="age"
-              type="number"
               value={profile.age}
+              defaultValue={30}
               min={18}
               max={110}
-              required
-              onChange={(v) => update("age", v === "" ? NaN : Number(v))}
+              disabled={busy}
+              onChange={(v) => update("age", v)}
             />
-            <div className="two">
-              <Field
-                label="키 (cm)"
-                name="height"
-                type="number"
-                value={profile.height}
-                min={100}
-                max={250}
-                required
-                onChange={(v) => update("height", v === "" ? NaN : Number(v))}
-              />
-              <Field
-                label="현재 체중 (kg)"
-                name="weight"
-                type="number"
-                step="0.1"
-                value={profile.weight}
-                min={25}
-                max={350}
-                required
-                onChange={(v) => update("weight", v === "" ? NaN : Number(v))}
-              />
-            </div>
+            <BodyNumberField
+              label="키 (cm)"
+              name="height"
+              value={profile.height}
+              defaultValue={170}
+              min={100}
+              max={250}
+              disabled={busy}
+              onChange={(v) => update("height", v)}
+            />
+            <BodyNumberField
+              label="현재 체중 (kg)"
+              name="weight"
+              value={profile.weight}
+              defaultValue={65}
+              min={25}
+              max={350}
+              disabled={busy}
+              onChange={(v) => update("weight", Math.round(v))}
+            />
             {profile.basis === "manual" && (
               <Field
                 label="BMR (kcal)"
@@ -560,7 +645,7 @@ export default function Onboarding({
           </p>
         )}
       </div>
-      <div className="footer-actions">
+      <div className="footer-actions intro-footer-actions">
         <Action disabled={busy} onClick={() => void next()}>
           {busy
             ? "저장 중…"
@@ -568,12 +653,11 @@ export default function Onboarding({
               ? "계산 시작하기"
               : step === summaryStep
                 ? initial
-                  ? "계산 결과 저장하기"
+                  ? "저장하기"
                   : "설정 완료하기"
                 : "다음"}
         </Action>
         <Action
-          secondary
           disabled={busy}
           onClick={() => (step === 0 ? onCancel() : goToStep(step - 1))}
         >

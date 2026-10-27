@@ -1,5 +1,4 @@
 import { Button } from "@toss/tds-mobile";
-import { graniteEvent } from "@apps-in-toss/web-framework";
 import { useEffect, useId, useRef, type ReactNode } from "react";
 export function Action({
   children,
@@ -133,10 +132,6 @@ export function Modal({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
-  useEffect(
-    () => graniteEvent.addEventListener("backEvent", { onEvent: onClose }),
-    [onClose],
-  );
   useEffect(() => {
     const dialog = ref.current;
     dialog?.showModal();
@@ -147,6 +142,7 @@ export function Modal({
       ref={ref}
       aria-labelledby={titleId}
       onCancel={(e) => {
+        e.stopPropagation();
         e.preventDefault();
         onClose();
       }}

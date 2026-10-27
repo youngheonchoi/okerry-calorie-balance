@@ -4,10 +4,71 @@ import {
   dateSchema,
   draftProfileSchema,
   lifestyleSchema,
+  mealSchema,
   validateWallet,
 } from "../../src/domain/validation";
 import { exercise, fixture } from "../fixtures";
+import { stamp } from "../../src/domain/model";
 describe("validation", () => {
+  it("requires a valid integer step count for exact-step activity records", () => {
+    const wallet = fixture();
+    const activity = {
+      ...stamp(),
+      date: "2026-10-01",
+      movement: "stepsExact" as const,
+      steps: 0,
+    };
+    wallet.meta.activityRecords = [activity];
+    expect(validateWallet(wallet).meta.activityRecords[0].steps).toBe(0);
+    for (const steps of [null, -1, 0.5, 100001]) {
+      expect(() =>
+        validateWallet({
+          ...wallet,
+          meta: { ...wallet.meta, activityRecords: [{ ...activity, steps }] },
+        }),
+      ).toThrow();
+    }
+  });
+  it("loads new and historical high-activity records without rewriting their bands", () => {
+    for (const movement of [
+      "steps12000plus",
+      "steps12000to15000",
+      "steps15000plus",
+    ] as const) {
+      const wallet = fixture();
+      wallet.meta.activityRecords = [
+        { ...stamp(), date: "2026-10-01", steps: null, movement },
+      ];
+      expect(
+        validateWallet(JSON.parse(JSON.stringify(wallet))).meta
+          .activityRecords[0].movement,
+      ).toBe(movement);
+    }
+  });
+  it("loads saved hiking records with their calculated calories", () => {
+    const wallet = fixture();
+    wallet.exercises = [
+      exercise({ kind: "hiking", minutes: 60, calories: 367.5 }),
+    ];
+    expect(
+      validateWallet(JSON.parse(JSON.stringify(wallet))).exercises[0],
+    ).toMatchObject({ kind: "hiking", calories: 367.5 });
+  });
+  it("accepts legacy meals and validates new whole-number quantities", () => {
+    const meal = {
+      ...fixture().profile!,
+      date: "2026-10-01",
+      type: "breakfast",
+      name: "사과",
+      calories: 200,
+      memo: "",
+    };
+    expect(mealSchema.safeParse(meal).success).toBe(true);
+    expect(mealSchema.parse({ ...meal, quantity: 2 }).quantity).toBe(2);
+    for (const quantity of [0, -1, 1.5, 1000]) {
+      expect(mealSchema.safeParse({ ...meal, quantity }).success).toBe(false);
+    }
+  });
   it("rejects invalid dates and future records", () => {
     expect(dateSchema.safeParse("2026-02-30").success).toBe(false);
     const w = fixture();

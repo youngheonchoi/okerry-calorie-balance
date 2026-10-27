@@ -2,7 +2,13 @@ export type DateKey = string;
 export type Stamp = { id: string; createdAt: string; updatedAt: string };
 export type Basis = "male" | "female" | "manual";
 export type ExerciseKind =
-  "running" | "walking" | "swimming" | "cycling" | "strength" | "other";
+  | "running"
+  | "walking"
+  | "swimming"
+  | "cycling"
+  | "strength"
+  | "hiking"
+  | "other";
 export type Intensity = "light" | "moderate" | "hard";
 export type Habit = {
   kind: ExerciseKind;
@@ -83,6 +89,7 @@ export type Meal = Stamp & {
   type: MealType;
   name: string;
   calories: number;
+  quantity?: number;
   memo: string;
 };
 export type Exercise = Stamp & {
@@ -101,28 +108,42 @@ export type WorkoutStatus = Stamp & { date: DateKey; workedOut: boolean };
 export const activityLevels = [
   {
     value: "steps0to3000",
-    label: "거의 없음",
-    steps: "0~3,000보 미만",
+    label: "거의 움직이지 않았어요",
+    example: "대부분 앉아서 생활",
+    steps: "3,000보 미만",
     estimate: 1500,
   },
   {
     value: "steps3000to6000",
-    label: "적음",
+    label: "조금 움직였어요",
+    example: "가벼운 외출이나 짧은 이동",
     steps: "3,000~6,000보 미만",
     estimate: 4500,
   },
   {
     value: "steps6000to9000",
-    label: "보통",
+    label: "보통으로 움직였어요",
+    example: "출퇴근과 일상적인 걷기",
     steps: "6,000~9,000보 미만",
     estimate: 7500,
   },
   {
     value: "steps9000to12000",
-    label: "조금 많음",
+    label: "많이 움직였어요",
+    example: "외출이 많거나 오래 걸은 날",
     steps: "9,000~12,000보 미만",
     estimate: 10500,
   },
+  {
+    value: "steps12000plus",
+    label: "매우 많이 움직였어요",
+    example: "하루 중 상당 시간을 걸은 날",
+    steps: "12,000보 이상",
+    // Keep the existing 12,000–15,000 band's representative value for new selections.
+    estimate: 13500,
+  },
+] as const;
+export const previousActivityLevels = [
   {
     value: "steps12000to15000",
     label: "많음",
@@ -135,8 +156,6 @@ export const activityLevels = [
     steps: "15,000보 이상",
     estimate: 16500,
   },
-] as const;
-export const previousActivityLevels = [
   {
     value: "steps0to2000",
     label: "거의 없음",
@@ -198,6 +217,7 @@ export type DailyActivity = Stamp & {
   steps: number | null;
   movement:
     | ActivityLevel
+    | "stepsExact"
     | (typeof previousActivityLevels)[number]["value"]
     | "veryLow"
     | "low"
@@ -214,6 +234,7 @@ export function activityLabel(movement: DailyActivity["movement"]): string {
   );
   if (level) return level.steps;
   return {
+    stepsExact: "직접 입력",
     veryLow: "거의 없음",
     low: "적음",
     moderate: "보통",
@@ -260,6 +281,7 @@ export const exerciseLabels: Record<ExerciseKind, string> = {
   swimming: "수영",
   cycling: "자전거",
   strength: "근력운동",
+  hiking: "등산",
   other: "기타",
 };
 export const goalLabels = {

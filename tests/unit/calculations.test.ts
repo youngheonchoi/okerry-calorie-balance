@@ -7,6 +7,7 @@ import {
   calculateDailyExpenditure,
   calculateExerciseCalories,
   calculateRemainingCalories,
+  calculateRecordedBalance,
   calculateTotalBalance,
   daily,
   datesBetween,
@@ -17,6 +18,99 @@ import {
 import { stamp } from "../../src/domain/model";
 import { exercise, fixture } from "../fixtures";
 describe("energy accounting", () => {
+  it("sums only recorded dates once and updates when a day's last record is removed", () => {
+    const wallet = fixture();
+    expect(calculateRecordedBalance(wallet, "2026-10-03")).toBe(0);
+    wallet.meals = [100, 200].map((calories) => ({
+      ...stamp(),
+      date: "2026-10-01",
+      type: "breakfast" as const,
+      name: "음식",
+      calories,
+      memo: "",
+    }));
+    wallet.exercises = [exercise({ source: "extra" })];
+    wallet.meta.activityRecords = [
+      { ...stamp(), date: "2026-10-03", movement: "stepsExact", steps: 5000 },
+    ];
+    wallet.weights = [{ ...stamp(), date: "2026-10-02", weight: 70 }];
+    expect(calculateRecordedBalance(wallet, "2026-10-03")).toBeCloseTo(
+      daily(wallet, "2026-10-01")!.balance +
+        daily(wallet, "2026-10-03")!.balance,
+    );
+    expect(calculateRecordedBalance(wallet, "2026-10-02")).toBeCloseTo(
+      daily(wallet, "2026-10-01")!.balance,
+    );
+    wallet.meals = [];
+    wallet.exercises = [];
+    expect(calculateRecordedBalance(wallet, "2026-10-03")).toBeCloseTo(
+      daily(wallet, "2026-10-03")!.balance,
+    );
+    wallet.meta.workoutStatus = [
+      { ...stamp(), date: "2026-10-02", workedOut: false },
+    ];
+    expect(calculateRecordedBalance(wallet, "2026-10-03")).toBeCloseTo(
+      daily(wallet, "2026-10-02")!.balance +
+        daily(wallet, "2026-10-03")!.balance,
+    );
+  });
+  it("uses exact steps only for direct input and accepts a recorded zero", () => {
+    const tdee = fixture().tdee_history[0];
+    const activity = {
+      ...stamp(),
+      date: "2026-10-01",
+      steps: 5000,
+      movement: "stepsExact" as const,
+    };
+    expect(calculateDailyActivityAdjustment(tdee, activity)).toBeCloseTo(
+      -22.05,
+    );
+    expect(
+      calculateDailyActivityAdjustment(tdee, { ...activity, steps: 5500 }),
+    ).toBeCloseTo(-11.025);
+    expect(
+      calculateDailyActivityAdjustment(tdee, { ...activity, steps: 0 }),
+    ).toBeCloseTo(-132.3);
+    expect(
+      calculateDailyActivityAdjustment(tdee, {
+        ...activity,
+        movement: "steps3000to6000",
+      }),
+    ).toBeCloseTo(-33.075);
+  });
+  it("uses the new highest activity band without changing historical six-band records", () => {
+    const tdee = fixture().tdee_history[0];
+    const activity = { ...stamp(), date: "2026-10-01", steps: null };
+    expect(
+      calculateDailyActivityAdjustment(tdee, {
+        ...activity,
+        movement: "steps12000plus",
+      }),
+    ).toBeCloseTo(165.375);
+    expect(
+      calculateDailyActivityAdjustment(tdee, {
+        ...activity,
+        movement: "steps12000to15000",
+      }),
+    ).toBeCloseTo(165.375);
+    expect(
+      calculateDailyActivityAdjustment(tdee, {
+        ...activity,
+        movement: "steps15000plus",
+      }),
+    ).toBeCloseTo(231.525);
+  });
+  it("calculates net hiking calories for each intensity", () => {
+    expect(calculateExerciseCalories("hiking", "light", 60, 70)).toBeCloseTo(
+      205.8,
+    );
+    expect(calculateExerciseCalories("hiking", "moderate", 60, 70)).toBeCloseTo(
+      367.5,
+    );
+    expect(calculateExerciseCalories("hiking", "hard", 60, 70)).toBeCloseTo(
+      573.3,
+    );
+  });
   it("uses the specified Mifflin formulas and manual BMR", () => {
     const p = fixture().profile!;
     expect(calculateBMR(p)).toBe(1648.75);

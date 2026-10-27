@@ -52,6 +52,81 @@
   background: var(--surface);
   border-color: var(--line);
 }
+.my-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -10px -10px 8px 0;
+}
+.my-card-heading h2 {
+  margin: 0;
+}
+.my-settings-card h2 {
+  font-size: 15px;
+}
+.my-settings-card .metric {
+  font-size: 14px;
+}
+.my-settings-card .hint {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.my-settings-card > p:not(.hint):not(.my-setting-value) {
+  font-size: 15px;
+}
+.card.my-keywords-card {
+  padding-block: 16px;
+}
+.my-keywords-card .my-card-heading {
+  margin-bottom: 0;
+}
+.my-keywords-card .hint {
+  margin: 4px 0 0;
+}
+.card.my-info-card {
+  padding-block: 16px;
+}
+.my-info-card .my-card-heading {
+  margin-bottom: 0;
+}
+.my-info-card .metric {
+  padding-block: 5px;
+}
+.my-info-card .hint {
+  margin: 8px 0 0;
+}
+.my-card-settings {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+}
+.my-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+.my-settings-grid > .card {
+  min-width: 0;
+  margin: 0;
+  padding: 12px 24px;
+}
+.my-settings-grid .my-card-heading {
+  gap: 0;
+  margin: -8px -8px 6px 0;
+}
+.my-settings-grid .my-card-heading h2 {
+  font-size: 15px;
+}
+.my-setting-value {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
 .eyebrow {
   font-size: 13px;
   font-weight: 600;
@@ -70,6 +145,90 @@
 }
 .section-heading h2 {
   margin-bottom: 0;
+}
+.meal-record-section,
+.exercise-record-section {
+  padding: 16px 0;
+}
+.meal-record-section + .meal-record-section {
+  border-top: 1px solid var(--line);
+}
+.meal-record-section .section-heading h2,
+.exercise-record-section .section-heading h2 {
+  font-size: 16px;
+}
+.meal-record-section .empty,
+.exercise-record-section .empty {
+  margin: 4px 0;
+  padding: 4px 0;
+}
+.meal-add-button,
+.exercise-add-button {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+}
+.meal-record-section > .meal-record-row,
+.exercise-record-section > .exercise-record-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  border: 0;
+  margin: 0;
+}
+.meal-record-badge,
+.exercise-record-badge {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: #f3f5f4;
+  font-size: 13px;
+}
+.meal-record-name,
+.exercise-record-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.meal-record-quantity,
+.exercise-record-duration {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.meal-record-calories,
+.exercise-record-calories {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.meal-record-row .record-actions,
+.exercise-record-row .record-actions {
+  flex: none;
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+.meal-record-row .record-actions button,
+.exercise-record-row .record-actions button {
+  min-width: 44px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 12px;
+  text-decoration: none;
+}
+.meal-record-row .record-actions button:last-child,
+.exercise-record-row .record-actions button:last-child {
+  border-color: var(--danger);
+  color: var(--danger);
 }
 .section-heading > span {
   font-size: 13px;
@@ -220,26 +379,12 @@
   gap: 2px;
 }
 .home-action-stage {
-  font-size: 12px !important;
+  font-size: 11.5px !important;
   line-height: 1.2;
   white-space: nowrap;
 }
-.home-action-complete {
-  margin-left: 4px;
-  font-size: 12px !important;
-}
-.home-action-complete::before {
-  content: "";
-  display: inline-block;
-  width: 5px;
-  height: 8px;
-  margin-right: 3px;
-  border: solid currentColor;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-}
 .home-action-label {
-  font-size: 14px !important;
+  font-size: 13px !important;
   line-height: 1.25;
   white-space: nowrap;
 }
@@ -248,6 +393,20 @@
   width: 100%;
   min-height: 44px;
   padding-inline: 4px !important;
+}
+.home-record-actions button.wallet-action:disabled {
+  --button-disabled-background-color: #fff;
+  --button-disabled-text-color: var(--brand-strong);
+  background-color: #fff !important;
+  border: 1px solid var(--line);
+  color: var(--brand-strong) !important;
+  opacity: 1 !important;
+}
+.home-record-actions button.wallet-action:disabled span {
+  color: var(--brand-strong) !important;
+}
+.home-record-actions button.wallet-action:disabled .home-action-stage {
+  color: var(--muted) !important;
 }
 .record-kind-switch {
   position: relative;
@@ -326,22 +485,65 @@
   }
 }
 .activity-help {
-  margin-bottom: 16px;
+  margin: 12px 0 20px;
   color: var(--muted);
   font-size: 15px;
 }
 .activity-levels {
   display: grid;
+  gap: 10px;
+}
+.activity-input-note {
+  margin: -8px 0 16px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.activity-steps-form {
+  margin-top: 10px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.activity-steps-form.selected {
+  border-color: var(--brand-strong);
+  background: var(--brand-soft);
+}
+.activity-steps-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
+  margin-bottom: 12px;
+}
+.activity-steps-heading h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.activity-steps-heading .activity-level-selected {
+  color: var(--brand-strong);
+}
+.activity-steps-form .field {
+  margin: 0 0 16px;
+}
+.activity-steps-form button.wallet-action {
+  --button-min-height: 44px !important;
+  --button-padding: 0 16px !important;
+  width: 100%;
+  min-width: 112px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 16px;
 }
 .activity-level {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
+  gap: 4px 12px;
   width: 100%;
   min-height: 52px;
-  padding: 10px 14px;
+  padding: 12px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--surface);
@@ -354,11 +556,38 @@
   color: var(--brand-strong);
 }
 .activity-level-name {
-  flex: none;
+  grid-column: 1;
+  grid-row: 1;
   font-size: 16px;
   font-weight: 600;
 }
+.activity-level-content {
+  display: contents;
+}
+.activity-level-example {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+.activity-level-steps {
+  grid-column: 2;
+  grid-row: 1;
+  text-align: right;
+  white-space: nowrap;
+}
+.activity-level-example,
+.activity-level-steps {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.activity-footnote {
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
 .activity-level-selected {
+  flex: none;
   margin-left: auto;
   font-size: 12px;
   white-space: nowrap;
@@ -373,6 +602,21 @@
   align-items: center;
   justify-content: space-between;
   margin: 16px 0;
+}
+.calendar-balance-summary {
+  margin: 12px 0 16px;
+  padding: 10px 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--brand-soft);
+}
+.calendar-page .calendar-balance-summary .metric {
+  gap: 12px;
+  font-size: 13px;
+}
+.calendar-balance-summary .metric strong {
+  font-size: 14px;
+  white-space: nowrap;
 }
 .calendar-month-heading h2 {
   margin: 0;
@@ -459,9 +703,125 @@
 }
 .calendar-selected-heading {
   margin: 20px 0 0;
+  font-size: 16px;
 }
 .calendar-page > .card {
   margin: 12px 0;
+  padding: 14px 16px;
+  border-color: color-mix(in srgb, var(--line) 82%, var(--text));
+  border-radius: 16px;
+  box-shadow: none;
+}
+.calendar-page > .card > h2 {
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+.calendar-record-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: -8px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+.calendar-record-heading h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.calendar-record-edit {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+}
+.calendar-record-editor > h1,
+.calendar-record-editor > .activity-page > h1 {
+  display: none;
+}
+.calendar-record-editor > .hint {
+  margin: 0 0 12px;
+}
+.calendar-record-editor .activity-help {
+  margin-top: 0;
+}
+.calendar-activity-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+.calendar-activity-actions > button {
+  --button-font-size: 13px !important;
+  --button-min-height: 44px !important;
+  --button-padding: 0 12px !important;
+  min-width: 0;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+.calendar-activity-actions button.wallet-action span {
+  font-size: 13px !important;
+}
+.dialog-content:has(> .calendar-activity-editor) > button:last-child {
+  display: none;
+}
+.dialog-content:has(> .calendar-record-editor) > h2 {
+  font-size: 16px;
+}
+.dialog-content:has(> .calendar-record-editor) > button.wallet-action {
+  --button-background-color: var(--brand) !important;
+  --button-font-size: 13px !important;
+  --button-min-height: 44px !important;
+  --button-padding: 8px 12px !important;
+  background-color: var(--brand) !important;
+}
+.dialog-content:has(> .calendar-record-editor) > button.wallet-action span {
+  font-size: 13px !important;
+}
+.calendar-page .metric {
+  font-size: 14px;
+  padding-block: 5px;
+}
+.calendar-page > .card .empty {
+  margin: 4px 0;
+  padding: 4px 0;
+}
+.calendar-activity-name {
+  margin: 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.calendar-meal-group {
+  padding-top: 6px;
+}
+.calendar-meal-group + .calendar-meal-group {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--line) 55%, var(--surface));
+}
+.calendar-meal-group h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.calendar-meal-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 14px;
+}
+.calendar-meal-name {
+  min-width: 0;
+  color: var(--text);
+}
+.calendar-meal-quantity,
+.calendar-meal-calories {
+  white-space: nowrap;
 }
 @media (max-width: 347px) {
   .calendar-grid-wrap {
@@ -588,6 +948,17 @@ button.wallet-action {
 button.wallet-action span {
   color: var(--on-action) !important;
 }
+button.wallet-action .compact-action-label {
+  font-size: 13px;
+}
+button.wallet-action:has(.compact-action-label) {
+  --button-min-height: 44px !important;
+  --button-padding: 8px 16px !important;
+  --button-border-radius: 12px !important;
+  min-height: 44px;
+  padding: 8px 16px;
+  border-radius: 12px;
+}
 button.wallet-secondary {
   background-color: var(--brand-action) !important;
   color: var(--on-action) !important;
@@ -641,6 +1012,7 @@ button.wallet-secondary span {
   gap: 12px;
 }
 .gender-option {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -657,12 +1029,55 @@ button.wallet-secondary span {
   color: var(--brand-strong);
 }
 .gender-option input[type="radio"] {
-  width: 20px;
-  height: 20px;
-  min-height: 20px;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
   margin: 0;
   padding: 0;
-  accent-color: var(--brand);
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.gender-option:has(input:focus-visible) {
+  outline: 3px solid var(--brand);
+  outline-offset: 3px;
+}
+.gender-icon {
+  display: inline-flex;
+  flex: none;
+}
+.body-number-field > label {
+  font-weight: 600;
+}
+.body-number-control {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.body-number-control input {
+  min-height: 44px;
+  padding: 8px;
+  border: 0;
+  text-align: center;
+  font-weight: 600;
+}
+.body-number-control input::-webkit-inner-spin-button,
+.body-number-control input::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+.body-number-control .body-number-adjust {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
 }
 .hint {
   font-size: 13px;
@@ -865,12 +1280,34 @@ button.wallet-secondary span {
   flex: none;
   min-width: 52px;
   min-height: 44px;
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  color: var(--danger);
+  font-size: 12px;
+}
+.food-keyword-delete-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  height: 32px;
   padding: 4px 8px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
   background: var(--surface);
-  color: var(--muted);
-  font-size: 13px;
+}
+dialog:has(.food-keyword-dialog) button.wallet-action {
+  --button-background-color: var(--brand) !important;
+  --button-color: var(--on-action) !important;
+  --button-font-size: 13px !important;
+  --button-min-height: 44px !important;
+  --button-padding: 8px 16px !important;
+  background-color: var(--brand) !important;
+  min-height: 44px;
+}
+dialog:has(.food-keyword-dialog) button.wallet-action span {
+  font-size: 13px !important;
 }
 .record p {
   color: var(--muted);
@@ -1036,6 +1473,31 @@ button.wallet-secondary span {
   background: var(--surface);
   box-shadow: 0 -4px 14px rgba(20, 50, 30, 0.04);
 }
+.intro-footer-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.intro-footer-actions > button:first-child {
+  order: 2;
+}
+.intro-footer-actions > button:last-child {
+  order: 1;
+}
+.intro-footer-actions button.wallet-action {
+  --button-min-height: 44px !important;
+  --button-padding: 0 16px !important;
+  --button-border-radius: 10px !important;
+  --button-font-size: 13px !important;
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 10px;
+}
+.intro-footer-actions button.wallet-action span {
+  font-size: 13px !important;
+}
 dialog {
   width: calc(100% - 32px);
   max-width: 500px;
@@ -1060,6 +1522,91 @@ dialog::backdrop {
 .dialog-content > button:last-child {
   margin-top: 12px;
 }
+.dialog-content:has(> :is(.meal-record-form, .exercise-record-form))
+  > button:last-child {
+  display: none;
+}
+.meal-form-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.meal-form-actions button.wallet-action {
+  --button-font-size: 13px !important;
+  --button-min-height: 44px !important;
+  --button-padding: 8px 12px !important;
+  --button-border-radius: 12px !important;
+  min-width: 0;
+  min-height: 44px;
+}
+.meal-form-actions button.wallet-action span {
+  font-size: 13px !important;
+}
+.dialog-content:has(> .record-delete-description) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 8px;
+}
+.dialog-content:has(> .record-delete-description) > * {
+  grid-column: 1 / -1;
+}
+.dialog-content:has(> .record-delete-description) > button.wallet-action {
+  --button-background-color: var(--brand) !important;
+  --button-color: var(--on-action) !important;
+  background-color: var(--brand) !important;
+  --button-font-size: 13px !important;
+  --button-min-height: 44px !important;
+  --button-padding: 8px 12px !important;
+  --button-border-radius: 12px !important;
+  grid-column: auto;
+  min-width: 0;
+  min-height: 44px;
+  margin-top: 8px;
+}
+.dialog-content:has(> .record-delete-description) > button.wallet-action span {
+  font-size: 13px !important;
+}
+.dialog-content:has(> .goal-settings-dialog) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 8px;
+}
+.dialog-content:has(> .goal-settings-dialog) > * {
+  grid-column: 1 / -1;
+}
+.dialog-content:has(> .goal-settings-dialog) > button.wallet-action {
+  --button-background-color: var(--brand) !important;
+  --button-color: var(--on-action) !important;
+  --button-font-size: 13px !important;
+  --button-min-height: 44px !important;
+  --button-padding: 8px 12px !important;
+  grid-column: auto;
+  order: 2;
+  min-width: 0;
+  min-height: 44px;
+  margin-top: 8px;
+  background-color: var(--brand) !important;
+}
+.dialog-content:has(> .goal-settings-dialog) > button.wallet-action:last-child {
+  order: 1;
+}
+.dialog-content:has(> .goal-settings-dialog) > button.wallet-action span {
+  font-size: 13px !important;
+}
+.dialog-content:has(> .reset-settings-dialog) > h2 {
+  font-size: 16px;
+}
+.reset-settings-dialog > p {
+  font-size: 15px;
+  line-height: 1.6;
+}
+.reset-settings-dialog .field {
+  font-size: 14px;
+}
+.reset-settings-dialog input {
+  font-size: 15px;
+}
 .file-picker {
   display: flex;
   flex-direction: column;
@@ -1067,9 +1614,11 @@ dialog::backdrop {
   margin: 20px 0;
 }
 .danger-button {
-  background: transparent;
-  border: 1px solid var(--line);
-  color: var(--danger);
+  width: 100%;
+  background: var(--danger);
+  border: 1px solid var(--danger);
+  color: var(--on-action);
+  font-size: 13px;
   border-radius: 14px;
   min-height: 48px;
   padding: 12px;
@@ -1104,6 +1653,9 @@ dialog::backdrop {
   }
 }
 @media (max-width: 360px) {
+  .my-settings-grid > .card {
+    padding-inline: 18px;
+  }
   .app-shell {
     padding-left: 16px;
     padding-right: 16px;

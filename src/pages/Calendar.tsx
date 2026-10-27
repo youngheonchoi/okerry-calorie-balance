@@ -1,9 +1,19 @@
 import { useState } from "react";
-import { Card, Icon, Metric } from "../components/ui";
-import { datesBetween, effective, getCycleDateRange } from "../domain/calculations";
-import { kcal } from "../domain/format";
+import { IconButton } from "@toss/tds-mobile";
+import { adaptive } from "@toss/tds-colors";
+import { Action, Card, Icon, Metric, Modal } from "../components/ui";
+import {
+  calculateRecordedBalance,
+  datesBetween,
+  effective,
+  getCycleDateRange,
+} from "../domain/calculations";
+import { errorMessage, kcal } from "../domain/format";
+import Activity from "./Activity";
+import Records from "./Records";
 import {
   activityLabel,
+  activityLevels,
   exerciseLabels,
   mealLabels,
   type Wallet,
@@ -11,24 +21,38 @@ import {
 
 const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
 const pad = (value: number) => String(value).padStart(2, "0");
+const editorLabels = { activity: "활동", meal: "식단", exercise: "운동" };
 
 export default function Calendar({
   wallet,
   today,
+  save,
+  busy,
 }: {
   wallet: Wallet;
   today: string;
+  save: (wallet: Wallet) => Promise<void>;
+  busy: boolean;
 }) {
   const [selectedDate, setSelectedDate] = useState(today);
   const [visibleMonth, setVisibleMonth] = useState(today.slice(0, 7));
+  const [editor, setEditor] = useState<keyof typeof editorLabels | null>(null);
+  const [deletingActivity, setDeletingActivity] = useState(false);
+  const [editError, setEditError] = useState("");
+  const recordedBalance = calculateRecordedBalance(wallet, today);
   const cycle = effective(wallet.cycle_history, today);
-  const currentCycle = cycle ? getCycleDateRange(today, cycle) : null;
-  const selectableDates = new Set([
-    ...wallet.meta.activityRecords.map((item) => item.date),
-    ...wallet.meals.map((item) => item.date),
-    ...wallet.exercises.map((item) => item.date),
-    ...(currentCycle ? datesBetween(currentCycle.start, currentCycle.end) : []),
-  ]);
+  const cycleRange = cycle ? getCycleDateRange(today, cycle) : null;
+  const selectableDates = new Set(
+    [
+      today,
+      ...(cycleRange ? datesBetween(cycleRange.start, cycleRange.end) : []),
+      ...wallet.meta.activityRecords.map((item) => item.date),
+      ...wallet.meals.map((item) => item.date),
+      ...wallet.exercises.map((item) => item.date),
+      ...wallet.meta.workoutStatus.map((item) => item.date),
+      ...wallet.weights.map((item) => item.date),
+    ].filter((date) => date <= today),
+  );
   const selectableMonths = [
     ...new Set([...selectableDates].map((date) => date.slice(0, 7))),
   ].sort();
@@ -38,6 +62,14 @@ export default function Calendar({
   const daysInMonth = new Date(year, month, 0).getDate();
   const activity = wallet.meta.activityRecords.find(
     (item) => item.date === selectedDate,
+  );
+  const activityLevel = activityLevels.find(
+    (level) =>
+      level.value ===
+      (activity?.movement === "steps12000to15000" ||
+      activity?.movement === "steps15000plus"
+        ? "steps12000plus"
+        : activity?.movement),
   );
   const meals = wallet.meals.filter((item) => item.date === selectedDate);
   const exercises = wallet.exercises.filter(
@@ -53,10 +85,43 @@ export default function Calendar({
     );
     setSelectedDate(dates.includes(today) ? today : dates.sort().at(-1)!);
   }
+  function openEditor(kind: keyof typeof editorLabels) {
+    setEditError("");
+    setEditor(kind);
+  }
+  async function removeActivity() {
+    if (busy) return;
+    setEditError("");
+    try {
+      await save({
+        ...wallet,
+        meta: {
+          ...wallet.meta,
+          activityRecords: wallet.meta.activityRecords.filter(
+            (item) => item.date !== selectedDate,
+          ),
+          updatedAt: new Date().toISOString(),
+        },
+      });
+      setDeletingActivity(false);
+      setEditor(null);
+    } catch (cause) {
+      setEditError(errorMessage(cause));
+    }
+  }
 
   return (
     <div className="calendar-page">
-      <h1>캘린더</h1>
+      <h1>달력</h1>
+      <section
+        className="calendar-balance-summary"
+        aria-label="칼로리 잔고 요약"
+      >
+        <Metric
+          label="총 누적 칼로리 잔고"
+          value={kcal(recordedBalance).replace(" ", "")}
+        />
+      </section>
       <div className="calendar-month-heading">
         <button
           type="button"
@@ -152,13 +217,29 @@ export default function Calendar({
         기록
       </h2>
       <Card>
-        <h2>활동</h2>
+        <div className="calendar-record-heading">
+          <h2>활동</h2>
+          <IconButton
+            name="icon-pencil-mono"
+            color={adaptive.grey500}
+            className="calendar-record-edit"
+            aria-label="활동 기록 수정"
+            iconSize={18}
+            disabled={busy || selectedDate > today}
+            onClick={() => openEditor("activity")}
+          />
+        </div>
         {activity ? (
           <>
-            <Metric
-              label="일상 활동량"
-              value={activityLabel(activity.movement)}
-            />
+            <p className="calendar-activity-name">
+              {activityLevel?.label ??
+                (activity.movement === "stepsExact"
+                  ? "걸음 수 직접 입력"
+                  : activityLabel(activity.movement))}
+            </p>
+            {activity.steps === null && activityLevel && (
+              <Metric label="참고 걸음 수" value={activityLevel.steps} />
+            )}
             {activity.steps !== null && (
               <Metric
                 label="기록한 걸음 수"
@@ -171,21 +252,57 @@ export default function Calendar({
         )}
       </Card>
       <Card>
-        <h2>식단</h2>
-        {meals.length === 0 ? (
-          <p className="empty">식단 기록이 없어요.</p>
-        ) : (
-          meals.map((meal) => (
-            <Metric
-              key={meal.id}
-              label={`${mealLabels[meal.type]} · ${meal.name}`}
-              value={kcal(meal.calories)}
-            />
-          ))
-        )}
+        <div className="calendar-record-heading">
+          <h2>식단</h2>
+          <IconButton
+            name="icon-pencil-mono"
+            color={adaptive.grey500}
+            className="calendar-record-edit"
+            aria-label="식단 기록 수정"
+            iconSize={18}
+            disabled={busy || selectedDate > today}
+            onClick={() => openEditor("meal")}
+          />
+        </div>
+        {Object.entries(mealLabels).map(([type, label]) => (
+          <section
+            className="calendar-meal-group"
+            key={type}
+            aria-label={label}
+          >
+            <h3>{label}</h3>
+            {!meals.some((meal) => meal.type === type) && (
+              <p className="empty">기록이 없어요.</p>
+            )}
+            {meals
+              .filter((meal) => meal.type === type)
+              .map((meal) => (
+                <div className="calendar-meal-row" key={meal.id}>
+                  <span className="calendar-meal-name">{meal.name}</span>
+                  <span className="calendar-meal-quantity">
+                    {meal.quantity ?? 1}EA
+                  </span>
+                  <span className="calendar-meal-calories">
+                    {kcal(meal.calories).replace(" ", "")}
+                  </span>
+                </div>
+              ))}
+          </section>
+        ))}
       </Card>
       <Card>
-        <h2>운동</h2>
+        <div className="calendar-record-heading">
+          <h2>운동</h2>
+          <IconButton
+            name="icon-pencil-mono"
+            color={adaptive.grey500}
+            className="calendar-record-edit"
+            aria-label="운동 기록 수정"
+            iconSize={18}
+            disabled={busy || selectedDate > today}
+            onClick={() => openEditor("exercise")}
+          />
+        </div>
         {exercises.length === 0 ? (
           <p className="empty">운동 기록이 없어요.</p>
         ) : (
@@ -198,6 +315,78 @@ export default function Calendar({
           ))
         )}
       </Card>
+      {editor && (
+        <Modal
+          title={`${selectedDate} ${editorLabels[editor]} 기록`}
+          onClose={() => setEditor(null)}
+        >
+          <div
+            className={`calendar-record-editor${editor === "activity" ? " calendar-activity-editor" : ""}`}
+          >
+            <p className="hint">선택한 날짜의 기록에 바로 반영돼요.</p>
+            {editor === "activity" ? (
+              <>
+                <Activity
+                  key={selectedDate}
+                  wallet={wallet}
+                  today={selectedDate}
+                  save={save}
+                  busy={busy}
+                />
+                <div className="calendar-activity-actions">
+                  <button
+                    type="button"
+                    className="danger-button"
+                    disabled={busy || !activity}
+                    onClick={() => {
+                      setEditError("");
+                      setDeletingActivity(true);
+                    }}
+                  >
+                    기록 삭제
+                  </button>
+                  <Action disabled={busy} onClick={() => setEditor(null)}>
+                    닫기
+                  </Action>
+                </div>
+              </>
+            ) : (
+              <Records
+                key={`${selectedDate}-${editor}`}
+                wallet={wallet}
+                kind={editor}
+                date={selectedDate}
+                save={save}
+                busy={busy}
+              />
+            )}
+            {editError && !deletingActivity && (
+              <p className="error" role="alert">
+                {editError}
+              </p>
+            )}
+          </div>
+        </Modal>
+      )}
+      {deletingActivity && (
+        <Modal
+          title="활동 기록을 삭제할까요?"
+          onClose={() => setDeletingActivity(false)}
+        >
+          <p className="record-delete-description">
+            {selectedDate}의 활동 기록을 삭제하고 해당 날짜의 칼로리 잔고에
+            반영해요.
+          </p>
+          {editError && (
+            <p className="error" role="alert">
+              {editError}
+            </p>
+          )}
+          <Action disabled={busy} onClick={() => void removeActivity()}>
+            삭제하기
+          </Action>
+        </Modal>
+      )}
     </div>
   );
 }

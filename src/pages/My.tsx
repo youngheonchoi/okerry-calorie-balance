@@ -1,5 +1,7 @@
-import { balanceText, kcal, errorMessage } from "../domain/format";
+import { kcal, errorMessage } from "../domain/format";
 import { useState } from "react";
+import { IconButton } from "@toss/tds-mobile";
+import { adaptive } from "@toss/tds-colors";
 import { Action, Card, Field, Metric, Modal } from "../components/ui";
 import { effective, localDate } from "../domain/calculations";
 import {
@@ -54,7 +56,10 @@ export default function My({
         const name = meal.name.trim();
         const key = normalizeFoodName(name);
         if (!hiddenKeywords.has(key) && !names.has(key))
-          names.set(key, { name, calories: meal.calories });
+          names.set(key, {
+            name,
+            calories: meal.calories / (meal.quantity ?? 1),
+          });
         return names;
       }, new Map<string, { name: string; calories: number }>())
       .values(),
@@ -144,8 +149,17 @@ export default function My({
   return (
     <>
       <h1>마이페이지</h1>
-      <Card>
-        <h2>내 정보</h2>
+      <Card className="my-settings-card my-info-card">
+        <div className="my-card-heading">
+          <h2>내 정보</h2>
+          <IconButton
+            name="icon-setting-mono"
+            color={adaptive.grey500}
+            className="my-card-settings"
+            aria-label="다시 계산하기"
+            onClick={recalculate}
+          />
+        </div>
         <Metric
           label="계산 기준"
           value={
@@ -160,67 +174,69 @@ export default function My({
           label="나이 / 키"
           value={`${profile.age}세 / ${profile.height}cm`}
         />
-        <Metric label="설정 체중" value={`${profile.weight}kg`} />
-        <Metric label="현재 BMR" value={kcal(currentTdee.bmr)} />
-        <Metric label="비운동일 TDEE" value={kcal(currentTdee.rest)} />
-        <Metric label="운동일 TDEE" value={kcal(currentTdee.exerciseDay)} />
-        <Action secondary onClick={recalculate}>
-          다시 계산하기
-        </Action>
-        <p className="hint">
-          기존 입력을 불러오며, 새 결과는 내일부터 적용돼요.
-        </p>
+        <Metric label="체중" value={`${profile.weight}kg`} />
+        <Metric label="기초대사량" value={kcal(currentTdee.bmr)} />
       </Card>
-      <Card>
-        <h2>식단 키워드 관리</h2>
+      <Card className="my-settings-card my-keywords-card">
+        <div className="my-card-heading">
+          <h2>식단 키워드 관리</h2>
+          <IconButton
+            name="icon-setting-mono"
+            color={adaptive.grey500}
+            className="my-card-settings"
+            aria-label="키워드 관리"
+            onClick={() => {
+              setKeywordError("");
+              setKeywordsOpen(true);
+            }}
+          />
+        </div>
         <p className="hint">
           이전 음식 선택 목록에서 자주 쓰지 않는 키워드를 삭제할 수 있어요.
         </p>
-        <Action
-          secondary
-          onClick={() => {
-            setKeywordError("");
-            setKeywordsOpen(true);
-          }}
-        >
-          키워드 관리
-        </Action>
       </Card>
-      <Card>
-        <h2>나의 목표</h2>
-        <Metric
-          label={goalLabels[currentGoal.kind]}
-          value={balanceText(currentGoal.balance)}
-        />
-        <Action secondary onClick={() => open("goal")}>
-          목표 재설정
-        </Action>
-      </Card>
-      <Card>
-        <h2>관리 주기</h2>
-        <Metric
-          label="현재 주기"
-          value={`매주 · ${["일", "월", "화", "수", "목", "금", "토"][currentCycle.weekday]}요일 시작`}
-        />
-        <Action secondary onClick={() => open("cycle")}>
-          관리 주기 변경
-        </Action>
-      </Card>
-      <Card>
-        <h2>데이터 초기화</h2>
-        <p>기록은 이 기기에 저장돼요.</p>
-        <div className="stack">
-          <button
-            className="danger-button"
-            onClick={() => {
-              setResetText("");
-              open("reset");
-            }}
-          >
-            모든 데이터 초기화
-          </button>
-        </div>
-      </Card>
+      <div className="my-settings-grid">
+        <Card className="my-settings-card">
+          <div className="my-card-heading">
+            <h2>나의 목표</h2>
+            <IconButton
+              name="icon-setting-mono"
+              color={adaptive.grey500}
+              className="my-card-settings"
+              aria-label="목표 재설정"
+              onClick={() => open("goal")}
+            />
+          </div>
+          <p className="my-setting-value">{goalLabels[currentGoal.kind]}</p>
+        </Card>
+        <Card className="my-settings-card">
+          <div className="my-card-heading">
+            <h2>관리 주기</h2>
+            <IconButton
+              name="icon-setting-mono"
+              color={adaptive.grey500}
+              className="my-card-settings"
+              aria-label="관리 주기 변경"
+              onClick={() => open("cycle")}
+            />
+          </div>
+          <p className="my-setting-value">
+            매주 ·{" "}
+            {["일", "월", "화", "수", "목", "금", "토"][currentCycle.weekday]}
+            요일 시작
+          </p>
+        </Card>
+      </div>
+      <button
+        type="button"
+        className="danger-button"
+        onClick={() => {
+          setResetText("");
+          open("reset");
+        }}
+      >
+        모든 데이터 초기화
+      </button>
       {message && (
         <p role="status" className="notice">
           {message}
@@ -243,7 +259,7 @@ export default function My({
           onClose={() => setEdit(null)}
         >
           {edit === "goal" && (
-            <>
+            <div className="goal-settings-dialog">
               <GoalFields goal={goal} onChange={setGoal} />
               {(currentTdee.rest + goal.balance < currentTdee.bmr ||
                 Math.abs(goal.balance) > 500) && (
@@ -252,10 +268,12 @@ export default function My({
                   피해주세요.
                 </p>
               )}
-            </>
+            </div>
           )}
           {edit === "cycle" && (
-            <CycleFields cycle={cycle} onChange={setCycle} weeklyOnly />
+            <div className="goal-settings-dialog">
+              <CycleFields cycle={cycle} onChange={setCycle} weeklyOnly />
+            </div>
           )}
           {edit === "goal" && (
             <p className="notice">저장하면 오늘 기록부터 바로 적용돼요.</p>
@@ -266,7 +284,7 @@ export default function My({
             </p>
           )}
           {edit === "reset" && (
-            <>
+            <div className="goal-settings-dialog reset-settings-dialog">
               <p>
                 신체 정보, 설정과 모든 기록을 이 기기에서 삭제해요. 삭제한
                 데이터는 복구할 수 없어요.
@@ -276,7 +294,7 @@ export default function My({
                 value={resetText}
                 onChange={setResetText}
               />
-            </>
+            </div>
           )}
           {error && (
             <p role="alert" className="error">
@@ -287,50 +305,48 @@ export default function My({
             disabled={busy || (edit === "reset" && resetText !== "초기화")}
             onClick={() => void commit()}
           >
-            {busy
-              ? "저장 중…"
-              : edit === "reset"
-                ? "모두 삭제하기"
-                : "저장하기"}
+            {busy ? "저장 중…" : edit === "reset" ? "모두 삭제하기" : "저장"}
           </Action>
         </Modal>
       )}
       {keywordsOpen && (
-        <Modal
-          title="식단 키워드 관리"
-          onClose={() => setKeywordsOpen(false)}
-        >
-          <p className="hint">
-            목록에서 삭제해도 기존 식단 기록은 그대로 유지돼요.
-          </p>
-          {keywordError && (
-            <p role="alert" className="error">
-              {keywordError}
+        <Modal title="식단 키워드 관리" onClose={() => setKeywordsOpen(false)}>
+          <div className="food-keyword-dialog">
+            <p className="hint">
+              목록에서 삭제해도 기존 식단 기록은 그대로 유지돼요.
             </p>
-          )}
-          {foodKeywords.length === 0 ? (
-            <p className="empty">관리할 음식 키워드가 없어요.</p>
-          ) : (
-            <div className="food-keyword-list">
-              {foodKeywords.map(({ name, calories }) => (
-                <div className="food-keyword-row" key={normalizeFoodName(name)}>
-                  <div className="food-keyword-info">
-                    <span>
-                      {name} - {kcal(calories).replace(" ", "")}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className="food-keyword-delete"
-                    disabled={busy}
-                    onClick={() => void hideFoodKeyword(name)}
+            {keywordError && (
+              <p role="alert" className="error">
+                {keywordError}
+              </p>
+            )}
+            {foodKeywords.length === 0 ? (
+              <p className="empty">관리할 음식 키워드가 없어요.</p>
+            ) : (
+              <div className="food-keyword-list">
+                {foodKeywords.map(({ name, calories }) => (
+                  <div
+                    className="food-keyword-row"
+                    key={normalizeFoodName(name)}
                   >
-                    삭제
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+                    <div className="food-keyword-info">
+                      <span>
+                        {name} - {kcal(calories).replace(" ", "")}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="food-keyword-delete"
+                      disabled={busy}
+                      onClick={() => void hideFoodKeyword(name)}
+                    >
+                      <span className="food-keyword-delete-label">삭제</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </Modal>
       )}
     </>

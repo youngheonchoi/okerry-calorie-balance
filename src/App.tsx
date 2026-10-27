@@ -28,7 +28,7 @@ const tabs: Record<Tab, string> = {
   home: "홈",
   activity: "활동",
   records: "기록",
-  calendar: "캘린더",
+  calendar: "달력",
   my: "마이",
 };
 const tabEntries = Object.entries(tabs) as [Tab, string][];
@@ -84,7 +84,9 @@ export default function App() {
     return graniteEvent.addEventListener("backEvent", {
       onEvent: () => {
         if (saving.current) return;
-        const dialog = document.querySelector("dialog[open]");
+        const dialog = Array.from(document.querySelectorAll("dialog[open]")).at(
+          -1,
+        );
         if (dialog) {
           dialog.dispatchEvent(new Event("cancel", { cancelable: true }));
           return;
@@ -364,7 +366,13 @@ export default function App() {
                 </div>
               )}
               {tab === "calendar" && (
-                <Calendar key={today} wallet={wallet} today={today} />
+                <Calendar
+                  key={today}
+                  wallet={wallet}
+                  today={today}
+                  save={save}
+                  busy={busy}
+                />
               )}
               {tab === "my" && (
                 <My

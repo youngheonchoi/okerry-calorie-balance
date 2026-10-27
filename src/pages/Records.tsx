@@ -1,6 +1,8 @@
 import { kcal, errorMessage } from "../domain/format";
 import { useEffect, useState } from "react";
-import { Action, Card, Field, Metric, Modal, Select } from "../components/ui";
+import { IconButton } from "@toss/tds-mobile";
+import { adaptive } from "@toss/tds-colors";
+import { Action, Field, Metric, Modal, Select } from "../components/ui";
 import {
   calculateExerciseCalories,
   effective,
@@ -16,8 +18,10 @@ import {
   type Wallet,
 } from "../domain/model";
 import { exerciseSchema, mealSchema } from "../domain/validation";
-const foodOptionValue = (meal: Pick<Meal, "name" | "calories">) =>
-  `${normalizeFoodName(meal.name)}::${meal.calories}`;
+const unitCalories = (meal: Pick<Meal, "calories" | "quantity">) =>
+  meal.calories / (meal.quantity ?? 1);
+const foodOptionValue = (meal: Pick<Meal, "name" | "calories" | "quantity">) =>
+  `${normalizeFoodName(meal.name)}::${unitCalories(meal)}`;
 const normalizeFoodName = (name: string) => name.trim().toLocaleLowerCase();
 export default function Records({
   wallet,
@@ -73,7 +77,27 @@ export default function Records({
   const newMeal = (type: MealType) => {
     setError("");
     setMealPreset("manual");
-    setMeal({ ...stamp(), date, type, name: "", calories: NaN, memo: "" });
+    setMeal({
+      ...stamp(),
+      date,
+      type,
+      name: "",
+      calories: NaN,
+      quantity: 1,
+      memo: "",
+    });
+  };
+  const adjustMealQuantity = (change: number) => {
+    setMeal((current) => {
+      if (!current) return null;
+      const quantity = Number.isInteger(current.quantity)
+        ? (current.quantity ?? 1)
+        : 1;
+      return {
+        ...current,
+        quantity: Math.max(1, Math.min(999, quantity + change)),
+      };
+    });
   };
   const newExercise = () => {
     setError("");
@@ -97,6 +121,7 @@ export default function Records({
         const item = mealSchema.parse({
           ...meal,
           name: meal.name.trim(),
+          calories: meal.calories * (meal.quantity ?? 1),
           updatedAt: new Date().toISOString(),
         });
         await save({
@@ -173,16 +198,23 @@ export default function Records({
       )}
       {kind === "meal" ? (
         Object.entries(mealLabels).map(([type, label]) => (
-          <Card key={type} id={`meal-${type}`}>
+          <section
+            key={type}
+            id={`meal-${type}`}
+            className="meal-record-section"
+            aria-labelledby={`meal-heading-${type}`}
+          >
             <div className="section-heading">
-              <h2>{label}</h2>
-              <span>
-                {kcal(
-                  meals
-                    .filter((m) => m.type === type)
-                    .reduce((n, m) => n + m.calories, 0),
-                )}
-              </span>
+              <h2 id={`meal-heading-${type}`}>{label}</h2>
+              <IconButton
+                type="button"
+                name="icon-plus-mono"
+                color={adaptive.grey500}
+                className="meal-add-button"
+                aria-label={`${label} 추가`}
+                disabled={!canRecord || busy}
+                onClick={() => newMeal(type as MealType)}
+              />
             </div>
             {meals.filter((m) => m.type === type).length === 0 && (
               <p className="empty">아직 기록이 없어요</p>
@@ -190,15 +222,28 @@ export default function Records({
             {meals
               .filter((m) => m.type === type)
               .map((m) => (
-                <div className="record" key={m.id}>
-                  <Metric label={m.name} value={kcal(m.calories)} />
-                  {m.memo && <p>{m.memo}</p>}
+                <div className="record meal-record-row" key={m.id}>
+                  <div className="meal-record-badge">
+                    <span className="meal-record-name" title={m.name}>
+                      {m.name}
+                    </span>
+                    <span className="meal-record-quantity">
+                      {m.quantity ?? 1} EA
+                    </span>
+                    <span className="meal-record-calories">
+                      {kcal(m.calories)}
+                    </span>
+                  </div>
                   <div className="record-actions">
                     <button
                       onClick={() => {
                         setError("");
                         setMealPreset("manual");
-                        setMeal(m);
+                        setMeal({
+                          ...m,
+                          calories: unitCalories(m),
+                          quantity: m.quantity ?? 1,
+                        });
                       }}
                     >
                       수정
@@ -211,63 +256,65 @@ export default function Records({
                   </div>
                 </div>
               ))}
-            <Action
-              secondary
-              disabled={!canRecord || busy}
-              onClick={() => newMeal(type as MealType)}
-            >
-              {label} 추가
-            </Action>
-          </Card>
+          </section>
         ))
       ) : (
-        <>
-          <Card>
-            <h2>운동 내역</h2>
-            {exercises.length === 0 && (
-              <p className="empty">운동한 내역을 기록해보세요.</p>
-            )}
-            {exercises.map((e) => (
-              <div className="record" key={e.id}>
-                <Metric
-                  label={exerciseLabels[e.kind]}
-                  value={kcal(e.calories)}
-                />
-                <p>
-                  {e.minutes}분 ·{" "}
-                  {e.source === "daily"
-                    ? "일상 활동에 포함"
-                    : e.source === "regular"
-                      ? "기존 정기 운동 기록"
-                      : "운동 기록"}
-                  {e.distance !== undefined ? ` · ${e.distance}km` : ""}
-                </p>
-                <div className="record-actions">
-                  <button
-                    onClick={() => {
-                      setError("");
-                      setExercise(e);
-                    }}
-                  >
-                    수정
-                  </button>
-                  <button
-                    onClick={() => setDeletion({ kind: "exercise", id: e.id })}
-                  >
-                    삭제
-                  </button>
-                </div>
+        <section
+          className="exercise-record-section"
+          aria-labelledby="exercise-record-heading"
+        >
+          <div className="section-heading">
+            <h2 id="exercise-record-heading">운동 내역</h2>
+            <IconButton
+              type="button"
+              name="icon-plus-mono"
+              color={adaptive.grey500}
+              className="exercise-add-button"
+              aria-label="운동 기록 추가"
+              disabled={!canRecord || busy}
+              onClick={newExercise}
+            />
+          </div>
+          {exercises.length === 0 && (
+            <p className="empty">운동한 내역을 기록해보세요.</p>
+          )}
+          {exercises.map((e) => (
+            <div className="record exercise-record-row" key={e.id}>
+              <div className="exercise-record-badge">
+                <span
+                  className="exercise-record-name"
+                  title={`${exerciseLabels[e.kind]}${e.distance !== undefined ? ` · ${e.distance}km` : ""}`}
+                >
+                  {exerciseLabels[e.kind]}
+                </span>
+                <span className="exercise-record-duration">{e.minutes}분</span>
+                <span className="exercise-record-calories">
+                  {kcal(e.calories)}
+                </span>
               </div>
-            ))}
-            <Action disabled={!canRecord || busy} onClick={newExercise}>
-              운동 기록 추가
-            </Action>
-          </Card>
-        </>
+              <div className="record-actions">
+                <button
+                  onClick={() => {
+                    setError("");
+                    setExercise(e);
+                  }}
+                >
+                  수정
+                </button>
+                <button
+                  onClick={() => setDeletion({ kind: "exercise", id: e.id })}
+                >
+                  삭제
+                </button>
+              </div>
+            </div>
+          ))}
+        </section>
       )}
       {meal && (
         <Modal title="음식 기록" onClose={() => setMeal(null)}>
           <form
+            className="meal-record-form"
             onSubmit={(e) => {
               e.preventDefault();
               void commit();
@@ -297,7 +344,7 @@ export default function Records({
                     setMeal({
                       ...meal,
                       name: selected.name,
-                      calories: selected.calories,
+                      calories: unitCalories(selected),
                     });
                 }}
                 options={{
@@ -305,7 +352,7 @@ export default function Records({
                   ...Object.fromEntries(
                     previousFoods.map((item) => [
                       foodOptionValue(item),
-                      `${item.name} · ${kcal(item.calories)}`,
+                      `${item.name} · ${kcal(unitCalories(item))}`,
                     ]),
                   ),
                 }}
@@ -328,25 +375,78 @@ export default function Records({
                 setMeal({ ...meal, calories: v === "" ? NaN : Number(v) })
               }
             />
-            <Field
-              label="섭취량 또는 메모 (선택)"
-              value={meal.memo}
-              onChange={(v) => setMeal({ ...meal, memo: v })}
+            <p className="hint">칼로리는 1개 기준으로 입력해주세요.</p>
+            <div className="field body-number-field">
+              <label htmlFor="meal-quantity">개수</label>
+              <div className="body-number-control">
+                <IconButton
+                  type="button"
+                  name="icon-minus-mono"
+                  className="body-number-adjust"
+                  aria-label="개수 줄이기"
+                  disabled={busy || (meal.quantity ?? 1) <= 1}
+                  onClick={() => adjustMealQuantity(-1)}
+                />
+                <input
+                  id="meal-quantity"
+                  type="number"
+                  min={1}
+                  max={999}
+                  step={1}
+                  required
+                  disabled={busy}
+                  value={
+                    Number.isNaN(meal.quantity) ? "" : (meal.quantity ?? 1)
+                  }
+                  onChange={(event) =>
+                    setMeal({
+                      ...meal,
+                      quantity:
+                        event.target.value === ""
+                          ? NaN
+                          : Number(event.target.value),
+                    })
+                  }
+                />
+                <IconButton
+                  type="button"
+                  name="icon-plus-mono"
+                  className="body-number-adjust"
+                  aria-label="개수 늘리기"
+                  disabled={busy || (meal.quantity ?? 1) >= 999}
+                  onClick={() => adjustMealQuantity(1)}
+                />
+              </div>
+            </div>
+            <Metric
+              label="총 칼로리"
+              value={kcal(
+                Number.isFinite(meal.calories) &&
+                  Number.isFinite(meal.quantity ?? 1)
+                  ? meal.calories * (meal.quantity ?? 1)
+                  : 0,
+              )}
             />
             {error && (
               <p role="alert" className="error">
                 {error}
               </p>
             )}
-            <Action type="submit" disabled={busy}>
-              저장하기
-            </Action>
+            <div className="meal-form-actions">
+              <Action disabled={busy} onClick={() => setMeal(null)}>
+                닫기
+              </Action>
+              <Action type="submit" disabled={busy}>
+                저장하기
+              </Action>
+            </div>
           </form>
         </Modal>
       )}
       {exercise && (
         <Modal title="운동 기록" onClose={() => setExercise(null)}>
           <form
+            className="exercise-record-form"
             onSubmit={(e) => {
               e.preventDefault();
               void commit();
@@ -358,22 +458,78 @@ export default function Records({
               onChange={(v) =>
                 setExercise({ ...exercise, kind: v as Exercise["kind"] })
               }
-              options={exerciseLabels}
+              options={Object.fromEntries(
+                Object.entries(exerciseLabels).filter(
+                  ([kind]) => kind !== "other" || exercise.kind === "other",
+                ),
+              )}
             />
-            <Field
-              label="운동 시간 (분)"
-              type="number"
-              required
-              min={1}
-              max={1440}
-              value={exercise.minutes}
-              onChange={(v) =>
-                setExercise({
-                  ...exercise,
-                  minutes: v === "" ? NaN : Number(v),
-                })
-              }
-            />
+            <div className="field body-number-field">
+              <label htmlFor="exercise-minutes">운동 시간 (분)</label>
+              <div className="body-number-control">
+                <IconButton
+                  type="button"
+                  name="icon-minus-mono"
+                  className="body-number-adjust"
+                  aria-label="운동 시간 줄이기"
+                  disabled={busy || exercise.minutes <= 1}
+                  onClick={() =>
+                    setExercise(
+                      (current) =>
+                        current && {
+                          ...current,
+                          minutes: Math.max(
+                            1,
+                            (Number.isFinite(current.minutes)
+                              ? current.minutes
+                              : 30) - 1,
+                          ),
+                        },
+                    )
+                  }
+                />
+                <input
+                  id="exercise-minutes"
+                  type="number"
+                  min={1}
+                  max={1440}
+                  step={1}
+                  required
+                  disabled={busy}
+                  value={Number.isNaN(exercise.minutes) ? "" : exercise.minutes}
+                  onChange={(event) =>
+                    setExercise({
+                      ...exercise,
+                      minutes:
+                        event.target.value === ""
+                          ? NaN
+                          : Number(event.target.value),
+                    })
+                  }
+                />
+                <IconButton
+                  type="button"
+                  name="icon-plus-mono"
+                  className="body-number-adjust"
+                  aria-label="운동 시간 늘리기"
+                  disabled={busy || exercise.minutes >= 1440}
+                  onClick={() =>
+                    setExercise(
+                      (current) =>
+                        current && {
+                          ...current,
+                          minutes: Math.min(
+                            1440,
+                            (Number.isFinite(current.minutes)
+                              ? current.minutes
+                              : 30) + 1,
+                          ),
+                        },
+                    )
+                  }
+                />
+              </div>
+            </div>
             <Select
               label="운동 강도"
               value={exercise.intensity}
@@ -385,36 +541,6 @@ export default function Records({
               }
               options={{ light: "가볍게", moderate: "보통", hard: "격하게" }}
             />
-            <Field
-              label="거리 (km, 선택)"
-              type="number"
-              step="0.1"
-              min={0}
-              value={exercise.distance ?? ""}
-              onChange={(v) =>
-                setExercise({
-                  ...exercise,
-                  distance: v === "" ? undefined : Number(v),
-                })
-              }
-            />
-            <Field
-              label="추가 소비량 직접 입력 (kcal, 선택)"
-              type="number"
-              min={0}
-              max={20000}
-              value={exercise.manualCalories ?? ""}
-              onChange={(v) =>
-                setExercise({
-                  ...exercise,
-                  manualCalories: v === "" ? undefined : Number(v),
-                })
-              }
-            />
-            <p className="hint">
-              직접 입력 시 안정 시 소비량을 제외한 값으로 입력해주세요. 거리
-              대신 시간과 강도로 계산해요.
-            </p>
             <Metric
               label="예상 순소비량"
               value={kcal(
@@ -432,15 +558,22 @@ export default function Records({
                 {error}
               </p>
             )}
-            <Action type="submit" disabled={busy}>
-              저장하기
-            </Action>
+            <div className="meal-form-actions">
+              <Action disabled={busy} onClick={() => setExercise(null)}>
+                닫기
+              </Action>
+              <Action type="submit" disabled={busy}>
+                저장하기
+              </Action>
+            </div>
           </form>
         </Modal>
       )}
       {deletion && (
         <Modal title="이 기록을 삭제할까요?" onClose={() => setDeletion(null)}>
-          <p>삭제한 기록은 해당 날짜와 누적 잔고에 바로 반영돼요.</p>
+          <p className="record-delete-description">
+            삭제한 기록은 해당 날짜와 누적 잔고에 바로 반영돼요.
+          </p>
           {error && <p role="alert">{error}</p>}
           <Action disabled={busy} onClick={() => void remove()}>
             삭제하기

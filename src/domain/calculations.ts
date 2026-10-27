@@ -51,6 +51,10 @@ const mets: Record<ExerciseKind, Record<Intensity, number>> = {
   swimming: { light: 5.8, moderate: 8, hard: 9.8 },
   cycling: { light: 4, moderate: 7, hard: 10 },
   strength: { light: 3, moderate: 3.5, hard: 6 },
+  // 2024 Adult Compendium walking codes 17081, 17080, 17036.
+  // Map slow hiking / cross-country hiking / steep uphill to the app's intensity choices.
+  // https://pacompendium.com/walking/
+  hiking: { light: 3.8, moderate: 6, hard: 8.8 },
   other: { light: 2.5, moderate: 4, hard: 6 },
 };
 export function calculateExerciseCalories(
@@ -205,13 +209,16 @@ export function calculateDailyActivityAdjustment(
     high: 12500,
     veryHigh: 17500,
   } as const;
-  const estimatedSteps = level
-    ? level.estimate
-    : activity?.movement && activity.movement in previousStepEstimates
-      ? previousStepEstimates[
-          activity.movement as keyof typeof previousStepEstimates
-        ]
-      : null;
+  const estimatedSteps =
+    activity?.movement === "stepsExact"
+      ? activity.steps
+      : level
+        ? level.estimate
+        : activity?.movement && activity.movement in previousStepEstimates
+          ? previousStepEstimates[
+              activity.movement as keyof typeof previousStepEstimates
+            ]
+          : null;
   if (estimatedSteps === null) return 0; // Older time-based records were never applied to TDEE.
   const weight = tdee.profile.weight;
   const selectedWalking = calculateExerciseCalories(
@@ -336,3 +343,17 @@ export function calculateCycleBalance(
 }
 export const calculateTotalBalance = (wallet: Wallet, today = localDate()) =>
   calculateCycleBalance(wallet, wallet.meta.startedOn, today, today);
+export function calculateRecordedBalance(
+  wallet: Wallet,
+  today = localDate(),
+): number {
+  const recordedDates = new Set([
+    ...wallet.meals.map((item) => item.date),
+    ...wallet.exercises.map((item) => item.date),
+    ...wallet.meta.activityRecords.map((item) => item.date),
+    ...wallet.meta.workoutStatus.map((item) => item.date),
+  ]);
+  return [...recordedDates]
+    .filter((date) => date >= wallet.meta.startedOn && date <= today)
+    .reduce((total, date) => total + (daily(wallet, date)?.balance ?? 0), 0);
+}

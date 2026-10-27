@@ -30,6 +30,7 @@ const kind = z.enum([
   "swimming",
   "cycling",
   "strength",
+  "hiking",
   "other",
 ]);
 const intensity = z.enum(["light", "moderate", "hard"]);
@@ -120,7 +121,7 @@ export const profileSchema = z
     ...stampSchema,
     ...bodySchema.shape,
     lifestyle: lifestyleSchema,
-    habits: z.array(habit).max(6),
+    habits: z.array(habit).max(7),
   })
   .refine(
     (p) => p.basis !== "manual" || p.manualBmr !== undefined,
@@ -145,7 +146,7 @@ export const draftProfileSchema = z.object({
     .array(
       z.object({ ...habit.shape, sessions: draftNumber, minutes: draftNumber }),
     )
-    .max(6),
+    .max(7),
 });
 const historyStamp = { ...stampSchema, effectiveFrom: dateSchema };
 const tdee = z.object({
@@ -187,6 +188,7 @@ export const mealSchema = z.object({
   type: z.enum(["breakfast", "lunch", "dinner", "snack"]),
   name: z.string().trim().min(1).max(100),
   calories: num(0, 10000),
+  quantity: num(1, 999).int().optional(),
   memo: z.string().max(300),
 });
 export const exerciseSchema = z.object({
@@ -223,36 +225,44 @@ const walletSchema = z.object({
       .default([]),
     activityRecords: z
       .array(
-        z.object({
-          ...stampSchema,
-          date: dateSchema,
-          steps: num(0, 100000).int().nullable(),
-          movement: z.enum([
-            "none",
-            "oneToTwo",
-            "threePlus",
-            "veryLow",
-            "low",
-            "moderate",
-            "high",
-            "veryHigh",
-            "steps0to2000",
-            "steps2000to4000",
-            "steps4000to6000",
-            "steps6000to8000",
-            "steps8000to10000",
-            "steps10000to12000",
-            "steps12000to14000",
-            "steps14000to16000",
-            "steps16000plus",
-            "steps0to3000",
-            "steps3000to6000",
-            "steps6000to9000",
-            "steps9000to12000",
-            "steps12000to15000",
-            "steps15000plus",
-          ]),
-        }),
+        z
+          .object({
+            ...stampSchema,
+            date: dateSchema,
+            steps: num(0, 100000).int().nullable(),
+            movement: z.enum([
+              "none",
+              "oneToTwo",
+              "threePlus",
+              "veryLow",
+              "low",
+              "moderate",
+              "high",
+              "veryHigh",
+              "steps0to2000",
+              "steps2000to4000",
+              "steps4000to6000",
+              "steps6000to8000",
+              "steps8000to10000",
+              "steps10000to12000",
+              "steps12000to14000",
+              "steps14000to16000",
+              "steps16000plus",
+              "steps0to3000",
+              "steps3000to6000",
+              "steps6000to9000",
+              "steps9000to12000",
+              "steps12000to15000",
+              "steps15000plus",
+              "steps12000plus",
+              "stepsExact",
+            ]),
+          })
+          .refine(
+            (activity) =>
+              activity.movement !== "stepsExact" || activity.steps !== null,
+            { path: ["steps"], message: "직접 입력한 걸음 수가 필요해요." },
+          ),
       )
       .max(100000)
       .default([]),
