@@ -18,6 +18,8 @@ import {
   type Wallet,
 } from "../domain/model";
 import { exerciseSchema, mealSchema } from "../domain/validation";
+import CalorieCalculator from "../components/CalorieCalculator";
+import { registerSharedFood } from "../data/sharedFoods";
 const unitCalories = (meal: Pick<Meal, "calories" | "quantity">) =>
   meal.calories / (meal.quantity ?? 1);
 const foodOptionValue = (meal: Pick<Meal, "name" | "calories" | "quantity">) =>
@@ -38,8 +40,9 @@ export default function Records({
   save: (w: Wallet) => Promise<void>;
   busy: boolean;
 }) {
+  const [calorieEstimate, setCalorieEstimate] = useState(false);
   const [meal, setMeal] = useState<Meal | null>(null),
-    [mealPreset, setMealPreset] = useState("manual"),
+    [foodSuggestionsOpen, setFoodSuggestionsOpen] = useState(false),
     [exercise, setExercise] = useState<Exercise | null>(null),
     [error, setError] = useState(""),
     [deletion, setDeletion] = useState<{
@@ -67,6 +70,12 @@ export default function Records({
       .values(),
   );
   const today = localDate();
+  const foodQuery = normalizeFoodName(meal?.name ?? "");
+  const suggestedFoods = foodQuery
+    ? previousFoods
+        .filter((item) => normalizeFoodName(item.name).includes(foodQuery))
+        .slice(0, 5)
+    : [];
   const canRecord = date <= today;
   useEffect(() => {
     if (kind === "meal" && mealType)
@@ -76,7 +85,8 @@ export default function Records({
   }, [kind, mealType, date]);
   const newMeal = (type: MealType) => {
     setError("");
-    setMealPreset("manual");
+    setFoodSuggestionsOpen(false);
+    setCalorieEstimate(false);
     setMeal({
       ...stamp(),
       date,
@@ -135,6 +145,12 @@ export default function Records({
             ),
             updatedAt: new Date().toISOString(),
           },
+        });
+        // Start only after Storage succeeds; remote failures never block saving.
+        void registerSharedFood({
+          foodName: meal.name,
+          caloriesKcal: item.calories / (item.quantity ?? 1),
+          quantity: item.quantity ?? 1,
         });
         setMeal(null);
       }
@@ -238,7 +254,8 @@ export default function Records({
                     <button
                       onClick={() => {
                         setError("");
-                        setMealPreset("manual");
+                        setFoodSuggestionsOpen(false);
+                        setCalorieEstimate(false);
                         setMeal({
                           ...m,
                           calories: unitCalories(m),
@@ -331,56 +348,113 @@ export default function Records({
               onChange={(v) => setMeal({ ...meal, type: v as MealType })}
               options={mealLabels}
             />
-            {previousFoods.length > 0 && (
-              <Select
-                label="음식 선택"
-                value={mealPreset}
-                onChange={(value) => {
-                  setMealPreset(value);
-                  if (value === "manual") {
-                    if (mealPreset !== "manual")
-                      setMeal({ ...meal, name: "", calories: NaN });
-                    return;
-                  }
-                  const selected = previousFoods.find(
-                    (item) => foodOptionValue(item) === value,
-                  );
-                  if (selected)
-                    setMeal({
-                      ...meal,
-                      name: selected.name,
-                      calories: unitCalories(selected),
-                    });
-                }}
-                options={{
-                  manual: "직접 입력",
-                  ...Object.fromEntries(
-                    previousFoods.map((item) => [
-                      foodOptionValue(item),
-                      `${item.name} · ${kcal(unitCalories(item))}`,
-                    ]),
-                  ),
+            <div
+              className="meal-food-input"
+              onFocus={() => setFoodSuggestionsOpen(true)}
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget))
+                  setFoodSuggestionsOpen(false);
+              }}
+              onKeyDown={(event) => {
+                if (
+                  event.key === "Escape" &&
+                  foodSuggestionsOpen &&
+                  suggestedFoods.length > 0
+                ) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setFoodSuggestionsOpen(false);
+                }
+              }}
+            >
+              <label className="field">
+                <span>음식 이름</span>
+                <input
+                  type="text"
+                  required
+                  autoComplete="off"
+                  value={meal.name}
+                  onClick={() => setFoodSuggestionsOpen(true)}
+                  onChange={(event) => {
+                    setCalorieEstimate(false);
+                    setMeal({ ...meal, name: event.target.value });
+                    setFoodSuggestionsOpen(true);
+                  }}
+                />
+              </label>
+              {foodSuggestionsOpen && suggestedFoods.length > 0 && (
+                <ul
+                  className="meal-food-suggestions"
+                  aria-label="이전에 기록한 음식"
+                >
+                  {suggestedFoods.map((item) => (
+                    <li key={foodOptionValue(item)}>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onPointerDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                          setCalorieEstimate(false);
+                          setMeal({
+                            ...meal,
+                            name: item.name,
+                            calories: unitCalories(item),
+                          });
+                          setFoodSuggestionsOpen(false);
+                        }}
+                      >
+                        <span>{item.name}</span>
+                        <span>{kcal(unitCalories(item))}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="meal-calorie-entry">
+              <Field
+                label="칼로리 (kcal)"
+                type="number"
+                required
+                min={0}
+                max={10000}
+                value={meal.calories}
+                onChange={(v) => {
+                  setCalorieEstimate(false);
+                  setMeal({ ...meal, calories: v === "" ? NaN : Number(v) });
                 }}
               />
-            )}
-            <Field
-              label="음식 이름"
-              required
-              value={meal.name}
-              onChange={(v) => setMeal({ ...meal, name: v })}
-            />
-            <Field
-              label="칼로리 (kcal)"
-              type="number"
-              required
-              min={0}
-              max={10000}
-              value={meal.calories}
-              onChange={(v) =>
-                setMeal({ ...meal, calories: v === "" ? NaN : Number(v) })
-              }
-            />
+              <CalorieCalculator
+                foodName={meal.name}
+                disabled={busy || meal.name.trim().length === 0}
+                localResult={(() => {
+                  const found = wallet.meals.find(
+                    (item) => item.name === meal.name,
+                  );
+                  return found
+                    ? {
+                        foodName: found.name,
+                        caloriesKcal: unitCalories(found),
+                      }
+                    : undefined;
+                })()}
+                onResult={(result) => {
+                  setMeal((current) =>
+                    current?.name === result.foodName
+                      ? { ...current, calories: result.caloriesKcal }
+                      : current,
+                  );
+                  setCalorieEstimate(result.source === "ai");
+                }}
+              />
+            </div>
             <p className="hint">칼로리는 1개 기준으로 입력해주세요.</p>
+            {calorieEstimate && (
+              <p className="hint" role="status">
+                AI가 추정한 칼로리예요. 실제 양과 조리법에 따라 달라질 수
+                있어요.
+              </p>
+            )}
             <div className="field body-number-field">
               <label htmlFor="meal-quantity">개수</label>
               <div className="body-number-control">

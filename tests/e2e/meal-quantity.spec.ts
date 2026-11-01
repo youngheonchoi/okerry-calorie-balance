@@ -4,6 +4,26 @@ import { fixture } from "../fixtures";
 test("meal quantities persist, edit without multiplying twice, and reuse unit calories", async ({
   page,
 }) => {
+  await page.route("**/api/calories", (route) =>
+    route.fulfill({
+      status: 503,
+      json: { error: "UNAVAILABLE" },
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "*",
+      },
+    }),
+  );
+  await page.route(
+    "https://okerry-calorie-balance-api.vercel.app/api/health",
+    (route) =>
+      route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        headers: { "Access-Control-Allow-Origin": "*" },
+        body: '{"status":"unavailable"}',
+      }),
+  );
   await page.addInitScript((wallet) => {
     if (localStorage.getItem("__ait_storage:calorie_wallet_profile")) return;
     for (const [field, data] of Object.entries(wallet)) {
@@ -72,9 +92,46 @@ test("meal quantities persist, edit without multiplying twice, and reuse unit ca
   await page.getByRole("button", { name: "저장하기", exact: true }).click();
   await expect(breakfast.getByText("200 kcal", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "점심 추가", exact: true }).click();
-  await page
-    .getByLabel("음식 선택", { exact: true })
-    .selectOption({ label: "테스트 사과 · 100 kcal" });
+  await expect(page.getByLabel("음식 선택", { exact: true })).toHaveCount(0);
+  await page.getByLabel("음식 이름", { exact: true }).click();
+  await expect(
+    page.getByRole("list", { name: "이전에 기록한 음식" }),
+  ).toHaveCount(0);
+  const caloriesBeforeSuggestions = await page
+    .getByLabel("칼로리 (kcal)", { exact: true })
+    .boundingBox();
+  await page.getByLabel("음식 이름", { exact: true }).fill("새로운 음식");
+  await expect(
+    page.getByRole("list", { name: "이전에 기록한 음식" }),
+  ).toHaveCount(0);
+  await expect(page.getByLabel("음식 이름", { exact: true })).toHaveValue(
+    "새로운 음식",
+  );
+  await page.getByLabel("음식 이름", { exact: true }).fill("사과");
+  const suggestion = page
+    .getByRole("list", { name: "이전에 기록한 음식" })
+    .getByRole("button", { name: "테스트 사과 100 kcal", exact: true });
+  await expect(suggestion).toBeVisible();
+  const caloriesWithSuggestions = await page
+    .getByLabel("칼로리 (kcal)", { exact: true })
+    .boundingBox();
+  expect(caloriesWithSuggestions?.y).toBe(caloriesBeforeSuggestions?.y);
+  await page.getByLabel("음식 이름", { exact: true }).fill("사과 없음");
+  await expect(suggestion).toHaveCount(0);
+  await page.getByLabel("음식 이름", { exact: true }).fill("사");
+  await expect(suggestion).toBeVisible();
+  await expect(suggestion).toHaveCSS("font-size", "12px");
+  expect((await suggestion.boundingBox())!.height).toBe(32);
+  await page.screenshot({ path: "test-results/meal-food-suggestions.png" });
+  await page.keyboard.press("Tab");
+  await expect(suggestion).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.getByLabel("음식 이름", { exact: true })).toHaveValue(
+    "테스트 사과",
+  );
+  await expect(
+    page.getByRole("list", { name: "이전에 기록한 음식" }),
+  ).toHaveCount(0);
   await expect(page.getByLabel("개수", { exact: true })).toHaveValue("1");
   await expect(page.getByLabel("칼로리 (kcal)", { exact: true })).toHaveValue(
     "100",
