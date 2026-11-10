@@ -2115,3 +2115,205 @@ dialog::backdrop {
 .calorie-confirmation-actions button span {
   font-size: 13px;
 }
+
+.my-export-menu {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 76px;
+  padding: 16px 20px;
+  margin: 20px 0;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  text-align: left;
+}
+.my-export-menu > span,
+.export-option-text,
+.export-format > span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.my-export-menu strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+.my-export-menu > span > span {
+  font-size: 13px;
+  color: var(--muted);
+}
+.my-export-menu > :last-child {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+.record-export-page {
+  word-break: keep-all;
+}
+.export-section {
+  margin: 28px 0;
+}
+.export-section h2 {
+  font-size: 18px;
+  margin: 0 0 12px;
+}
+.export-presets {
+  display: flex;
+  gap: 8px;
+}
+.export-presets button {
+  flex: 1;
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 15px;
+}
+.export-date-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+  max-width: 100%;
+}
+.export-date-fields .field {
+  min-width: 0;
+  margin: 16px 0 0;
+}
+.export-date-fields input {
+  display: block;
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  min-height: 48px;
+  padding: 10px;
+  font-size: 16px;
+}
+@media (max-width: 420px) {
+  .export-date-fields {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}
+.export-options {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.export-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  min-height: 72px;
+}
+.export-option + .export-option {
+  border-top: 1px solid var(--line);
+}
+.export-option-text {
+  flex: 1;
+  min-height: 48px;
+  justify-content: center;
+  cursor: pointer;
+}
+.export-option strong,
+.export-format strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+.export-option-text > span,
+.export-format > span > span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.export-formats {
+  display: grid;
+  gap: 8px;
+}
+.export-format {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 76px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  cursor: pointer;
+}
+.export-format.selected {
+  border-color: var(--brand-strong);
+  background: var(--brand-soft);
+}
+.export-format input {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  accent-color: var(--brand);
+  margin: 0;
+}
+.export-help {
+  font-size: 15px;
+  color: var(--muted);
+  margin: 12px 0;
+}
+.export-prompt-label {
+  display: block;
+  font-weight: 600;
+  font-size: 18px;
+}
+.export-prompt {
+  width: 100%;
+  min-height: 320px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 16px;
+  font-size: 15px;
+  line-height: 1.7;
+}
+.export-actions {
+  padding-bottom: max(
+    34px,
+    var(--safe-bottom, env(safe-area-inset-bottom, 0px))
+  );
+}
+.export-actions p {
+  margin: 12px 0;
+  font-size: 15px;
+}
+.export-actions button.wallet-action {
+  --button-font-size: 13px !important;
+  --button-min-height: 44px !important;
+  --button-padding: 0 16px !important;
+  --button-border-radius: 12px !important;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+.export-actions button.wallet-action span {
+  font-size: 13px;
+}
+
+.export-settings {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.export-reward-help {
+  color: var(--muted);
+  font-size: 15px;
+}

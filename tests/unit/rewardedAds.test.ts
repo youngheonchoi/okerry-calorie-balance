@@ -38,6 +38,31 @@ function setup() {
 }
 afterEach(() => vi.useRealTimers());
 describe("rewarded ad lifecycle", () => {
+  it("waits for dismissal after earning when a native file action follows the ad", async () => {
+    const app = setup();
+    const loading = app.ad.preload("group");
+    app.loaded();
+    await loading;
+    const complete = vi.fn();
+    const showing = app.ad.show({ waitForDismissal: true }).then(complete);
+    app.event("userEarnedReward");
+    await Promise.resolve();
+    expect(complete).not.toHaveBeenCalled();
+    app.event("dismissed");
+    await showing;
+    expect(complete).toHaveBeenCalledWith(true);
+    app.ad.dispose();
+  });
+  it("does not unlock an export when dismissed without earning", async () => {
+    const app = setup();
+    const loading = app.ad.preload("group");
+    app.loaded();
+    await loading;
+    const showing = app.ad.show({ waitForDismissal: true });
+    app.event("dismissed");
+    await expect(showing).resolves.toBe(false);
+    app.ad.dispose();
+  });
   it("deduplicates preloads and rewards only earned, never dismissed", async () => {
     const app = setup();
     const first = app.ad.preload("test"),

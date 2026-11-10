@@ -1,6 +1,6 @@
 import { kcal, errorMessage } from "../domain/format";
 import { useState } from "react";
-import { IconButton } from "@toss/tds-mobile";
+import { Asset, IconButton } from "@toss/tds-mobile";
 import { adaptive } from "@toss/tds-colors";
 import { Action, Card, Field, Metric, Modal } from "../components/ui";
 import { effective, localDate } from "../domain/calculations";
@@ -22,12 +22,14 @@ export default function My({
   recalculate,
   reset,
   busy,
+  openExport,
 }: {
   wallet: Wallet;
   save: (w: Wallet) => Promise<void>;
   recalculate: () => void;
   reset: () => Promise<void>;
   busy: boolean;
+  openExport: () => void;
 }) {
   const today = localDate(),
     profile = effective(wallet.tdee_history, today)!.profile;
@@ -179,6 +181,17 @@ export default function My({
         <Metric label="체중" value={`${profile.weight}kg`} />
         <Metric label="기초대사량" value={kcal(currentTdee.bmr)} />
       </Card>
+      <button type="button" className="my-export-menu" onClick={openExport}>
+        <span>
+          <strong>기록 내보내기</strong>
+          <span>기간과 항목을 골라 내보낼 수 있어요.</span>
+        </span>
+        <Asset.Icon
+          name="icon-arrow-right-mono"
+          color={adaptive.grey500}
+          aria-hidden="true"
+        />
+      </button>
       <Card className="my-settings-card my-keywords-card">
         <div className="my-card-heading">
           <h2>식단 키워드 관리</h2>

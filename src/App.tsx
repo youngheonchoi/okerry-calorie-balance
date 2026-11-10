@@ -18,6 +18,7 @@ import Activity from "./pages/Activity";
 import Calendar from "./pages/Calendar";
 import Records from "./pages/Records";
 import My from "./pages/My";
+import RecordExport from "./pages/RecordExport";
 import Onboarding from "./pages/Onboarding";
 import InlineBannerAd from "./components/InlineBannerAd";
 import "./App.css";
@@ -46,6 +47,7 @@ export default function App() {
     [today, setToday] = useState(localDate),
     [mealType, setMealType] = useState<MealType | undefined>();
   const saving = useRef(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const tabScroll = useRef<HTMLDivElement>(null);
   const recordSwipeStart = useRef<{ x: number; y: number } | null>(null);
   async function load() {
@@ -93,12 +95,17 @@ export default function App() {
           dialog.dispatchEvent(new Event("cancel", { cancelable: true }));
           return;
         }
+        if (tab === "my" && exportOpen) {
+          setExportOpen(false);
+          tabScroll.current?.scrollTo(0, 0);
+          return;
+        }
         changeTab("home");
       },
       onError: () =>
         setError("뒤로가기를 연결하지 못했어요. 화면의 버튼을 이용해주세요."),
     });
-  }, [onboarding, tab]);
+  }, [onboarding, tab, exportOpen]);
   useEffect(() => {
     const refresh = () => setToday(localDate());
     const timer = window.setInterval(refresh, 30000);
@@ -129,6 +136,7 @@ export default function App() {
     }
   }
   function changeTab(next: Tab) {
+    setExportOpen(false);
     setTab(next);
     tabScroll.current?.scrollTo(0, 0);
     window.scrollTo(0, 0);
@@ -382,7 +390,10 @@ export default function App() {
                       busy={busy}
                     />
                   )}
-                  {tab === "my" && (
+                  {tab === "my" && exportOpen && (
+                    <RecordExport wallet={wallet} today={today} />
+                  )}
+                  {tab === "my" && !exportOpen && (
                     <My
                       wallet={wallet}
                       save={save}
@@ -392,6 +403,10 @@ export default function App() {
                         window.scrollTo(0, 0);
                       }}
                       reset={reset}
+                      openExport={() => {
+                        setExportOpen(true);
+                        tabScroll.current?.scrollTo(0, 0);
+                      }}
                     />
                   )}
                   <InlineBannerAd key={tab} placement={tab} />

@@ -83,11 +83,14 @@ export function createRewardedAdController(
       .catch(() => undefined);
     return result;
   }
-  async function show(): Promise<boolean> {
+  async function show(
+    options: { waitForDismissal?: boolean } = {},
+  ): Promise<boolean> {
     if (disposed || !ready || !supported()) throw new Error("Ad not ready");
     ready = false;
     return new Promise<boolean>((resolve, reject) => {
       let settled = false;
+      let earned = false;
       const finish = (earned: boolean, failed = false) => {
         if (settled) return;
         settled = true;
@@ -102,8 +105,10 @@ export function createRewardedAdController(
         showCleanup = sdk.show({
           options: { adGroupId: id },
           onEvent: (event) => {
-            if (event.type === "userEarnedReward") finish(true);
-            else if (event.type === "dismissed") finish(false);
+            if (event.type === "userEarnedReward") {
+              earned = true;
+              if (!options.waitForDismissal) finish(true);
+            } else if (event.type === "dismissed") finish(earned);
             else if (event.type === "failedToShow") finish(false, true);
           },
           onError: () => finish(false, true),
