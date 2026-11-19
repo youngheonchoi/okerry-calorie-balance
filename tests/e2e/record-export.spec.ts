@@ -186,10 +186,16 @@ test("blocks invalid dates and keeps narrow-screen controls within the viewport"
       .getByLabel("시작일", { exact: true })
       .boundingBox();
     const end = await page.getByLabel("종료일", { exact: true }).boundingBox();
+    const options = await page.locator(".export-options").boundingBox();
+    expect(start!.x).toBeCloseTo(options!.x, 0);
+    expect(end!.x + end!.width).toBeCloseTo(options!.x + options!.width, 0);
     expect(start!.x + start!.width).toBeLessThanOrEqual(width);
     expect(end!.x + end!.width).toBeLessThanOrEqual(width);
-    if (width <= 420) expect(end!.y).toBeGreaterThan(start!.y + start!.height);
-    else expect(end!.y).toBe(start!.y);
+    if (width <= 420) {
+      expect(end!.y).toBeGreaterThan(start!.y + start!.height);
+      expect(start!.width).toBeCloseTo(options!.width, 0);
+      expect(end!.width).toBeCloseTo(options!.width, 0);
+    } else expect(end!.y).toBe(start!.y);
     expect(
       await page
         .locator(".tab-content-scroll")
